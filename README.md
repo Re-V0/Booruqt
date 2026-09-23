@@ -166,6 +166,19 @@ the rule that a plugin never blocks the GUI thread.
 - Library DB, sources, theme: `~/.local/share/blairqt/blairqt/`
 - Thumbnail cache: `~/.cache/blairqt/`
 
+## Contributing
+
+Issues and merge requests are welcome. Before sending a patch, run the suite
+above — it is fast and needs nothing installed.
+
+**Windows:** a port is welcome and I will merge it, but I do not run Windows,
+so whoever writes it owns testing it too. Nothing in the code stands in the
+way: there are no POSIX calls, everything goes through Qt, and the app already
+looks for its translations and the plugin runner next to the binary, so a
+portable layout works as-is. What needs doing: resolving `python3` to whatever
+Python is called on Windows, hiding the tag sidecars (a leading dot hides
+nothing there), and `windeployqt`.
+
 ## License
 
 Copyright (c) 2026 re-v0. Mozilla Public License 2.0 — see [LICENSE](LICENSE),
