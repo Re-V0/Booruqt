@@ -21,6 +21,10 @@ HTML-scrape bridge.
 What it does not do: play video, log into accounts, upload anything, or
 sandbox plugins.
 
+![Searching Safebooru; the details panel shows the clicked post](docs/screenshot-search.png)
+
+![The Library tab: downloaded posts, searchable by tag, in real folders](docs/screenshot-library.png)
+
 ## Quickstart
 
 Arch Linux:

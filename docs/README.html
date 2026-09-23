@@ -178,6 +178,25 @@
     break-inside: avoid;
   }
 
+  /* Sized so both shots and the lead text share one page instead of one
+     figure pushing the other over the break. */
+  figure {
+    margin: 1.1em 0 1.3em;
+    break-inside: avoid;
+  }
+
+  figure img {
+    width: 78%;
+    display: block;
+    border: 0.7pt solid var(--hairline);
+  }
+
+  figcaption {
+    font-size: 8.4pt;
+    color: var(--muted);
+    margin-top: 0.45em;
+  }
+
   .colophon {
     margin-top: 2.4em;
     padding-top: 0.5em;
@@ -215,6 +234,16 @@ HTML-scrape bridge.</p>
 
 <p class="negative">What it does not do: play video, log into accounts, upload
 anything, or sandbox plugins.</p>
+
+<figure>
+  <img src="screenshot-search.png" alt="">
+  <figcaption>Searching Safebooru; the details panel shows the clicked post.</figcaption>
+</figure>
+
+<figure>
+  <img src="screenshot-library.png" alt="">
+  <figcaption>The Library tab: downloaded posts, searchable by tag, in real folders.</figcaption>
+</figure>
 
 <h2>Quickstart</h2>
 
