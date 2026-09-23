@@ -1,13 +1,22 @@
 # B.LAIR_QT
 
-*Booru Local Archive & Indexing Repository, Qt edition.*
+*The name B.LAIR stands for (Booru) Local Archive & Indexing Repository.*
 
 A desktop booru client. Qt6, C++, no Electron.
 
-It searches several booru sites at once, downloads the originals, and keeps
-them in ordinary folders on your disk. Tags go into a SQLite index next to
-them. Delete the database and the files are still there, still sorted, still
-openable by anything else on the system.
+B.LAIR_QT is native software for browsing boorus with a local gallery. What
+separates it from other booru clients is that the gallery acts as the booru
+repository itself: it respects source and tags, and lives in ordinary folders
+your Linux file manager already understands.
+
+It searches several boorus at once and downloads the originals; tags go into a
+SQLite index next to the files. Delete the database and the files are still
+there, still sorted, still openable by anything else on the system.
+
+Boorus that are not on the list are usually one URL away: the app probes the
+site against six engines and picks the one that fits. Anything else takes a
+short Python plugin — or, for sites with no API at all, the bundled
+HTML-scrape bridge.
 
 What it does not do: play video, log into accounts, upload anything, or
 sandbox plugins.
