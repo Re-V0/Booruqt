@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>sources.json</file>
+        <file>curated_themes.json</file>
+    </qresource>
+</RCC>

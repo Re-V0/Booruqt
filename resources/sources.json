@@ -1,0 +1,67 @@
+[
+    {
+        "name": "Danbooru",
+        "flavor": "danbooru",
+        "baseUrl": "https://danbooru.donmai.us"
+    },
+    {
+        "name": "Safebooru",
+        "flavor": "gelbooru",
+        "baseUrl": "https://safebooru.org"
+    },
+    {
+        "name": "TBIB",
+        "flavor": "gelbooru",
+        "baseUrl": "https://tbib.org"
+    },
+    {
+        "name": "Xbooru",
+        "flavor": "gelbooru",
+        "baseUrl": "https://xbooru.com"
+    },
+    {
+        "name": "HypnoHub",
+        "flavor": "gelbooru",
+        "baseUrl": "https://hypnohub.net"
+    },
+    {
+        "name": "Yande.re",
+        "flavor": "moebooru",
+        "baseUrl": "https://yande.re"
+    },
+    {
+        "name": "Konachan",
+        "flavor": "moebooru",
+        "baseUrl": "https://konachan.com"
+    },
+    {
+        "name": "Konachan.net (safe)",
+        "flavor": "moebooru",
+        "baseUrl": "https://konachan.net"
+    },
+    {
+        "name": "e621",
+        "flavor": "e621",
+        "baseUrl": "https://e621.net"
+    },
+    {
+        "name": "e926 (safe)",
+        "flavor": "e621",
+        "baseUrl": "https://e926.net"
+    },
+    {
+        "name": "Derpibooru",
+        "flavor": "philomena",
+        "baseUrl": "https://derpibooru.org"
+    },
+    {
+        "name": "Ponybooru",
+        "flavor": "philomena",
+        "baseUrl": "https://ponybooru.org"
+    },
+    {
+        "name": "Furbooru",
+        "flavor": "philomena",
+        "baseUrl": "https://furbooru.org"
+    }
+]

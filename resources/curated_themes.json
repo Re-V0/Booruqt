@@ -1,0 +1,202 @@
+[
+  {
+    "name": "Nord",
+    "colors": {
+      "window": "#2E3440", "windowText": "#D8DEE9", "base": "#2E3440", "alternateBase": "#3B4252",
+      "text": "#E5E9F0", "button": "#434C5E", "buttonText": "#ECEFF4", "brightText": "#ECEFF4",
+      "highlight": "#88C0D0", "highlightedText": "#2E3440", "link": "#81A1C1", "linkVisited": "#B48EAD",
+      "placeholderText": "#4C566A", "toolTipBase": "#3B4252", "toolTipText": "#E5E9F0",
+      "light": "#E5E9F0", "midlight": "#4C566A", "dark": "#242933", "mid": "#4C566A", "shadow": "#1E222A"
+    }
+  },
+  {
+    "name": "Dracula",
+    "colors": {
+      "window": "#282A36", "windowText": "#F8F8F2", "base": "#21222C", "alternateBase": "#44475A",
+      "text": "#F8F8F2", "button": "#44475A", "buttonText": "#F8F8F2", "brightText": "#FFFFFF",
+      "highlight": "#BD93F9", "highlightedText": "#282A36", "link": "#8BE9FD", "linkVisited": "#FF79C6",
+      "placeholderText": "#6272A4", "toolTipBase": "#44475A", "toolTipText": "#F8F8F2",
+      "light": "#F8F8F2", "midlight": "#6272A4", "dark": "#1E1F29", "mid": "#6272A4", "shadow": "#14151C"
+    }
+  },
+  {
+    "name": "Gruvbox Dark",
+    "colors": {
+      "window": "#282828", "windowText": "#EBDBB2", "base": "#1D2021", "alternateBase": "#3C3836",
+      "text": "#EBDBB2", "button": "#504945", "buttonText": "#EBDBB2", "brightText": "#FBF1C7",
+      "highlight": "#D3869B", "highlightedText": "#282828", "link": "#83A598", "linkVisited": "#D3869B",
+      "placeholderText": "#A89984", "toolTipBase": "#3C3836", "toolTipText": "#EBDBB2",
+      "light": "#EBDBB2", "midlight": "#7C6F64", "dark": "#1D2021", "mid": "#7C6F64", "shadow": "#141617"
+    }
+  },
+  {
+    "name": "Gruvbox Light",
+    "colors": {
+      "window": "#FBF1C7", "windowText": "#3C3836", "base": "#F9F5D7", "alternateBase": "#EBDBB2",
+      "text": "#3C3836", "button": "#D5C4A1", "buttonText": "#3C3836", "brightText": "#282828",
+      "highlight": "#8F3F71", "highlightedText": "#FBF1C7", "link": "#076678", "linkVisited": "#8F3F71",
+      "placeholderText": "#7C6F64", "toolTipBase": "#EBDBB2", "toolTipText": "#3C3836",
+      "light": "#FFFFFF", "midlight": "#D5C4A1", "dark": "#BDAE93", "mid": "#A89984", "shadow": "#7C6F64"
+    }
+  },
+  {
+    "name": "Solarized Dark",
+    "colors": {
+      "window": "#002B36", "windowText": "#839496", "base": "#00212B", "alternateBase": "#073642",
+      "text": "#93A1A1", "button": "#073642", "buttonText": "#93A1A1", "brightText": "#FDF6E3",
+      "highlight": "#268BD2", "highlightedText": "#FDF6E3", "link": "#2AA198", "linkVisited": "#6C71C4",
+      "placeholderText": "#586E75", "toolTipBase": "#073642", "toolTipText": "#93A1A1",
+      "light": "#93A1A1", "midlight": "#586E75", "dark": "#00212B", "mid": "#586E75", "shadow": "#001920"
+    }
+  },
+  {
+    "name": "Solarized Light",
+    "colors": {
+      "window": "#FDF6E3", "windowText": "#657B83", "base": "#FFFEF4", "alternateBase": "#EEE8D5",
+      "text": "#586E75", "button": "#EEE8D5", "buttonText": "#586E75", "brightText": "#002B36",
+      "highlight": "#268BD2", "highlightedText": "#FDF6E3", "link": "#2AA198", "linkVisited": "#6C71C4",
+      "placeholderText": "#93A1A1", "toolTipBase": "#EEE8D5", "toolTipText": "#586E75",
+      "light": "#FFFFFF", "midlight": "#EEE8D5", "dark": "#93A1A1", "mid": "#93A1A1", "shadow": "#657B83"
+    }
+  },
+  {
+    "name": "One Dark",
+    "colors": {
+      "window": "#282C34", "windowText": "#ABB2BF", "base": "#21252B", "alternateBase": "#2C313A",
+      "text": "#ABB2BF", "button": "#3A3F4B", "buttonText": "#ABB2BF", "brightText": "#FFFFFF",
+      "highlight": "#61AFEF", "highlightedText": "#282C34", "link": "#56B6C2", "linkVisited": "#C678DD",
+      "placeholderText": "#5C6370", "toolTipBase": "#2C313A", "toolTipText": "#ABB2BF",
+      "light": "#ABB2BF", "midlight": "#5C6370", "dark": "#21252B", "mid": "#4B5263", "shadow": "#181A1F"
+    }
+  },
+  {
+    "name": "One Light",
+    "colors": {
+      "window": "#FAFAFA", "windowText": "#383A42", "base": "#FFFFFF", "alternateBase": "#F0F0F1",
+      "text": "#383A42", "button": "#E5E5E6", "buttonText": "#383A42", "brightText": "#000000",
+      "highlight": "#4078F2", "highlightedText": "#FAFAFA", "link": "#0184BC", "linkVisited": "#A626A4",
+      "placeholderText": "#A0A1A7", "toolTipBase": "#F0F0F1", "toolTipText": "#383A42",
+      "light": "#FFFFFF", "midlight": "#E5E5E6", "dark": "#A0A1A7", "mid": "#A0A1A7", "shadow": "#696C77"
+    }
+  },
+  {
+    "name": "Monokai",
+    "colors": {
+      "window": "#272822", "windowText": "#F8F8F2", "base": "#1E1F1C", "alternateBase": "#3E3D32",
+      "text": "#F8F8F2", "button": "#3E3D32", "buttonText": "#F8F8F2", "brightText": "#FFFFFF",
+      "highlight": "#F92672", "highlightedText": "#F8F8F2", "link": "#66D9EF", "linkVisited": "#AE81FF",
+      "placeholderText": "#75715E", "toolTipBase": "#3E3D32", "toolTipText": "#F8F8F2",
+      "light": "#F8F8F2", "midlight": "#75715E", "dark": "#1E1F1C", "mid": "#75715E", "shadow": "#131412"
+    }
+  },
+  {
+    "name": "Tokyo Night",
+    "colors": {
+      "window": "#1A1B26", "windowText": "#C0CAF5", "base": "#16161E", "alternateBase": "#292E42",
+      "text": "#C0CAF5", "button": "#292E42", "buttonText": "#C0CAF5", "brightText": "#FFFFFF",
+      "highlight": "#7AA2F7", "highlightedText": "#1A1B26", "link": "#7DCFFF", "linkVisited": "#BB9AF7",
+      "placeholderText": "#565F89", "toolTipBase": "#292E42", "toolTipText": "#C0CAF5",
+      "light": "#C0CAF5", "midlight": "#565F89", "dark": "#16161E", "mid": "#414868", "shadow": "#0F0F14"
+    }
+  },
+  {
+    "name": "Catppuccin Mocha",
+    "colors": {
+      "window": "#1E1E2E", "windowText": "#CDD6F4", "base": "#181825", "alternateBase": "#313244",
+      "text": "#CDD6F4", "button": "#313244", "buttonText": "#CDD6F4", "brightText": "#FFFFFF",
+      "highlight": "#CBA6F7", "highlightedText": "#1E1E2E", "link": "#89DCEB", "linkVisited": "#F5C2E7",
+      "placeholderText": "#A6ADC8", "toolTipBase": "#313244", "toolTipText": "#CDD6F4",
+      "light": "#CDD6F4", "midlight": "#6C7086", "dark": "#181825", "mid": "#585B70", "shadow": "#11111B"
+    }
+  },
+  {
+    "name": "Catppuccin Latte",
+    "colors": {
+      "window": "#EFF1F5", "windowText": "#4C4F69", "base": "#FFFFFF", "alternateBase": "#E6E9EF",
+      "text": "#4C4F69", "button": "#CCD0DA", "buttonText": "#4C4F69", "brightText": "#000000",
+      "highlight": "#8839EF", "highlightedText": "#EFF1F5", "link": "#1E66F5", "linkVisited": "#EA76CB",
+      "placeholderText": "#6C6F85", "toolTipBase": "#E6E9EF", "toolTipText": "#4C4F69",
+      "light": "#FFFFFF", "midlight": "#CCD0DA", "dark": "#ACB0BE", "mid": "#9CA0B0", "shadow": "#6C6F85"
+    }
+  },
+  {
+    "name": "Ayu Dark",
+    "colors": {
+      "window": "#0A0E14", "windowText": "#B3B1AD", "base": "#060A0F", "alternateBase": "#0D1017",
+      "text": "#B3B1AD", "button": "#131721", "buttonText": "#B3B1AD", "brightText": "#FFFFFF",
+      "highlight": "#FF8F40", "highlightedText": "#0A0E14", "link": "#59C2FF", "linkVisited": "#D2A6FF",
+      "placeholderText": "#626A73", "toolTipBase": "#0D1017", "toolTipText": "#B3B1AD",
+      "light": "#B3B1AD", "midlight": "#626A73", "dark": "#060A0F", "mid": "#3D4149", "shadow": "#000000"
+    }
+  },
+  {
+    "name": "Ayu Light",
+    "colors": {
+      "window": "#FAFAFA", "windowText": "#5C6166", "base": "#FFFFFF", "alternateBase": "#F0F0F0",
+      "text": "#5C6166", "button": "#E7E8E9", "buttonText": "#5C6166", "brightText": "#000000",
+      "highlight": "#FA8D3E", "highlightedText": "#FAFAFA", "link": "#399EE6", "linkVisited": "#A37ACC",
+      "placeholderText": "#ABB0B6", "toolTipBase": "#F0F0F0", "toolTipText": "#5C6166",
+      "light": "#FFFFFF", "midlight": "#E7E8E9", "dark": "#ABB0B6", "mid": "#8A9199", "shadow": "#5C6166"
+    }
+  },
+  {
+    "name": "Nightfox",
+    "colors": {
+      "window": "#192330", "windowText": "#CDCECF", "base": "#131A24", "alternateBase": "#212E3F",
+      "text": "#CDCECF", "button": "#29394F", "buttonText": "#CDCECF", "brightText": "#FFFFFF",
+      "highlight": "#719CD6", "highlightedText": "#131A24", "link": "#63CDCF", "linkVisited": "#9D79D6",
+      "placeholderText": "#71839B", "toolTipBase": "#212E3F", "toolTipText": "#CDCECF",
+      "light": "#CDCECF", "midlight": "#71839B", "dark": "#131A24", "mid": "#39506D", "shadow": "#0B0E14"
+    }
+  },
+  {
+    "name": "Everforest Dark",
+    "colors": {
+      "window": "#2D353B", "windowText": "#D3C6AA", "base": "#232A2E", "alternateBase": "#343F44",
+      "text": "#D3C6AA", "button": "#3D484D", "buttonText": "#D3C6AA", "brightText": "#FFFFFF",
+      "highlight": "#A7C080", "highlightedText": "#2D353B", "link": "#7FBBB3", "linkVisited": "#D699B6",
+      "placeholderText": "#7A8478", "toolTipBase": "#343F44", "toolTipText": "#D3C6AA",
+      "light": "#D3C6AA", "midlight": "#7A8478", "dark": "#232A2E", "mid": "#4F585E", "shadow": "#1E2326"
+    }
+  },
+  {
+    "name": "Rosé Pine",
+    "colors": {
+      "window": "#191724", "windowText": "#E0DEF4", "base": "#16141F", "alternateBase": "#1F1D2E",
+      "text": "#E0DEF4", "button": "#26233A", "buttonText": "#E0DEF4", "brightText": "#FFFFFF",
+      "highlight": "#C4A7E7", "highlightedText": "#191724", "link": "#9CCFD8", "linkVisited": "#EBBCBA",
+      "placeholderText": "#6E6A86", "toolTipBase": "#1F1D2E", "toolTipText": "#E0DEF4",
+      "light": "#E0DEF4", "midlight": "#6E6A86", "dark": "#16141F", "mid": "#403D52", "shadow": "#0F0D17"
+    }
+  },
+  {
+    "name": "Material Dark",
+    "colors": {
+      "window": "#263238", "windowText": "#EEFFFF", "base": "#1E272C", "alternateBase": "#2E3C43",
+      "text": "#EEFFFF", "button": "#37474F", "buttonText": "#EEFFFF", "brightText": "#FFFFFF",
+      "highlight": "#82AAFF", "highlightedText": "#263238", "link": "#89DDFF", "linkVisited": "#C792EA",
+      "placeholderText": "#546E7A", "toolTipBase": "#2E3C43", "toolTipText": "#EEFFFF",
+      "light": "#EEFFFF", "midlight": "#546E7A", "dark": "#1E272C", "mid": "#37474F", "shadow": "#14191C"
+    }
+  },
+  {
+    "name": "GitHub Dark",
+    "colors": {
+      "window": "#0D1117", "windowText": "#C9D1D9", "base": "#010409", "alternateBase": "#161B22",
+      "text": "#C9D1D9", "button": "#21262D", "buttonText": "#C9D1D9", "brightText": "#FFFFFF",
+      "highlight": "#79C0FF", "highlightedText": "#0D1117", "link": "#79C0FF", "linkVisited": "#D2A8FF",
+      "placeholderText": "#8B949E", "toolTipBase": "#161B22", "toolTipText": "#C9D1D9",
+      "light": "#C9D1D9", "midlight": "#8B949E", "dark": "#010409", "mid": "#30363D", "shadow": "#000000"
+    }
+  },
+  {
+    "name": "GitHub Light",
+    "colors": {
+      "window": "#FFFFFF", "windowText": "#24292F", "base": "#FFFFFF", "alternateBase": "#F6F8FA",
+      "text": "#24292F", "button": "#EAEEF2", "buttonText": "#24292F", "brightText": "#000000",
+      "highlight": "#0969DA", "highlightedText": "#FFFFFF", "link": "#0969DA", "linkVisited": "#8250DF",
+      "placeholderText": "#6E7781", "toolTipBase": "#F6F8FA", "toolTipText": "#24292F",
+      "light": "#FFFFFF", "midlight": "#EAEEF2", "dark": "#D0D7DE", "mid": "#8C959F", "shadow": "#6E7781"
+    }
+  }
+]

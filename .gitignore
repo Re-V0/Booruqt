@@ -1,0 +1,11 @@
+build/
+pkg/
+src/build/
+*.pkg.tar.zst
+compile_commands.json
+.cache/
+__pycache__/
+*.pyc
+*.aux
+*.log
+*.out

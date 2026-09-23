@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=B.LAIR_QT
+GenericName=Booru Gallery Client
+Comment=Native Qt6 booru browser, downloader and local tag library
+Exec=blairqt
+Icon=blairqt
+Terminal=false
+Categories=Graphics;Network;Qt;

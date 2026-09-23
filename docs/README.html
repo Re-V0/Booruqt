@@ -1,0 +1,352 @@
+<!doctype html>
+<!--
+  Source of README.pdf. Typeset to match the application: monochrome,
+  JetBrains Mono, the same wordmark as the icon.
+
+    google-chrome-stable --headless --no-pdf-header-footer \
+        --print-to-pdf=README.pdf docs/README.html
+
+  Needs JetBrains Mono Nerd Font and Fira Sans installed system-wide.
+-->
+<meta charset="utf-8">
+<title>B.LAIR_QT</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 19mm 18mm 19mm;
+  }
+
+  /* Chrome clips anything outside the page margin, so the cover gets its own
+     margin-free page instead of negative margins. */
+  @page :first {
+    margin: 0;
+  }
+
+  :root {
+    --panel: #050505;
+    --chalk: #f2f2f2;
+    --ink: #15151a;
+    --muted: #6e6e78;
+    --hairline: #d9d9d4;
+  }
+
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html { font-size: 10.5pt; }
+
+  body {
+    margin: 0;
+    font-family: "Fira Sans", sans-serif;
+    color: var(--ink);
+    line-height: 1.52;
+  }
+
+  /* Full-bleed cover: exact page size, with the page margin cancelled out. */
+  .cover {
+    position: relative;
+    box-sizing: border-box;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    background: var(--panel);
+    color: var(--chalk);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding-bottom: 26mm;
+    break-after: page;
+  }
+
+  .cover img { width: 44mm; height: 44mm; }
+
+  .cover h1 {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-weight: 800;
+    font-size: 30pt;
+    letter-spacing: 0.02em;
+    margin: 12mm 0 0;
+  }
+
+  .cover .tagline {
+    font-size: 12pt;
+    font-style: italic;
+    color: #cfcfcf;
+    margin-top: 6mm;
+  }
+
+  .cover .oneline {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 9.5pt;
+    color: #a9a9b0;
+    margin-top: 4mm;
+  }
+
+  .cover .stamp {
+    position: absolute;
+    bottom: 26mm;
+    left: 0;
+    right: 0;
+  }
+
+  .cover .stamp hr {
+    width: 58mm;
+    border: 0;
+    border-top: 0.6pt solid #55555c;
+    margin: 0 auto 5mm;
+  }
+
+  .cover .stamp span {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 7.6pt;
+    letter-spacing: 0.34em;
+    color: #8d8d96;
+  }
+
+  .lead {
+    font-size: 11.6pt;
+    line-height: 1.5;
+    margin: 0 0 1.1em;
+  }
+
+  .negative {
+    font-size: 10.5pt;
+    color: var(--ink);
+    margin: 0 0 1.6em;
+  }
+
+  h2 {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-weight: 800;
+    font-size: 13.5pt;
+    letter-spacing: -0.01em;
+    margin: 2.1em 0 0.15em;
+    padding-bottom: 0.32em;
+    border-bottom: 0.7pt solid var(--hairline);
+    break-after: avoid;
+  }
+
+  h2:first-of-type { margin-top: 0.6em; }
+
+  p { margin: 0 0 0.85em; orphans: 2; widows: 2; }
+
+  ul { margin: 0.2em 0 0.9em; padding-left: 1.15em; }
+  li { margin-bottom: 0.28em; }
+  li::marker { color: var(--muted); }
+
+  code, pre {
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+  }
+
+  code {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 0.88em;
+    background: #f0f0ec;
+    padding: 0.05em 0.22em;
+    border-radius: 2px;
+  }
+
+  pre {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 8.9pt;
+    line-height: 1.5;
+    background: var(--panel);
+    color: var(--chalk);
+    padding: 4.5mm 5mm;
+    margin: 0.5em 0 1.1em;
+    white-space: pre;
+    break-inside: avoid;
+  }
+
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+
+  .warn {
+    border: 0.9pt solid var(--ink);
+    padding: 3.4mm 4.5mm;
+    margin: 1em 0 1.2em;
+    font-weight: 600;
+    break-inside: avoid;
+  }
+
+  .colophon {
+    margin-top: 2.4em;
+    padding-top: 0.5em;
+    border-top: 0.7pt solid var(--hairline);
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-size: 8pt;
+    color: var(--muted);
+  }
+</style>
+
+<section class="cover">
+  <img src="../resources/blairqt.svg" alt="">
+  <h1>B.LAIR_QT</h1>
+  <div class="tagline">Booru Local Archive &amp; Indexing Repository, Qt edition</div>
+  <div class="oneline">A desktop booru client. Qt6, C++, no Electron.</div>
+  <div class="stamp">
+    <hr>
+    <span>VERSION 0.3.0 &nbsp;·&nbsp; MPL 2.0 &nbsp;·&nbsp; re-v0</span>
+  </div>
+</section>
+
+<p class="lead">It searches several booru sites at once, downloads the
+originals, and keeps them in ordinary folders on your disk. Tags go into a
+SQLite index next to them. Delete the database and the files are still there,
+still sorted, still openable by anything else on the system.</p>
+
+<p class="negative">What it does not do: play video, log into accounts, upload
+anything, or sandbox plugins.</p>
+
+<h2>Quickstart</h2>
+
+<p>Arch Linux:</p>
+
+<pre><code>makepkg -si</code></pre>
+
+<p>Gentoo — drop the ebuild into a local overlay:</p>
+
+<pre><code>mkdir -p /var/db/repos/local/media-gfx/blairqt
+cp blairqt-0.3.0.ebuild /var/db/repos/local/media-gfx/blairqt/
+ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-0.3.0.ebuild manifest
+emerge -av media-gfx/blairqt</code></pre>
+
+<p><code>blairqt-9999.ebuild</code> builds from git master instead.
+<code>USE=python</code> pulls an interpreter for script plugins;
+<code>USE=test</code> runs the suite during the merge.</p>
+
+<p>Anything else — needs Qt 6 (Widgets, Network, Concurrent, Sql,
+LinguistTools), CMake 3.21+ and a C++20 compiler:</p>
+
+<pre><code>cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/blairqt</code></pre>
+
+<p>On first start a welcome screen asks which sources to load. Nothing
+explicit is enabled unless you pick it. Type tags, hit Enter, drag the slider
+if the thumbnails are the wrong size. Right-click a post to download it or to
+blacklist a tag.</p>
+
+<h2>Sources</h2>
+
+<p>Six generic parsers — Danbooru, Gelbooru/dapi, Moebooru, e621, Philomena,
+Szurubooru — cover dozens of sites without a class per site. <b>Add custom
+booru</b> probes a URL and works out which one fits.</p>
+
+<p>Several sources can be merged into one gallery. Paging, infinite scroll and
+autoscroll are three ways to move through results; picking one disables the
+controls that stop making sense.</p>
+
+<p>Cloudflare-gated Gelbooru sites accept a cookie and User-Agent you paste
+in. Sites with no API at all can go through the bundled HTML-scrape bridge —
+those posts arrive without tags, rating or dimensions, which is the price of
+scraping HTML.</p>
+
+<p>Every request, status code and response snippet lands in the network log
+dock. When a site misbehaves, that dock is the first place to look.</p>
+
+<h2>Library</h2>
+
+<p>Downloads are indexed in SQLite with an FTS5 tag index and written into
+real nested folders — the same folders Dolphin or Thunar show. Move files
+between them from inside the app and the tags follow; re-downloading a post
+you already have is detected and skipped.</p>
+
+<p>Each image also gets a hidden tags sidecar next to it — <code>image.png</code>
+gets <code>.image.png.txt</code>, one line of space-separated tags. It follows
+the file when you move it, and it is what lets another tool (or you, with
+<code>grep</code>) read the tags without touching the database. The metadata
+is stored as <code>.txt</code> as well, because why not — txt is cheap.</p>
+
+<p>Search the library by tag, filter by folder, with or without subfolders.
+Zoom opens local files instantly, animated GIFs included.</p>
+
+<h2>Blacklist</h2>
+
+<p>A tag blacklist, global or per source, editable in Settings or straight
+from a post's context menu. Sites that understand <code>-tag</code> get the
+exclusions pushed into the query; the rest are filtered before they reach the
+grid.</p>
+
+<p>Matching is exact: <code>solo</code> does not hide <code>solo_focus</code>.
+It can apply to the library too, if you want the same rules on what you
+already downloaded.</p>
+
+<h2>Plugins</h2>
+
+<p>A new booru engine is one Python file. No C++, no rebuild:</p>
+
+<pre><code>def build_search_request(base_url, tags, page, per_page) -&gt; dict:
+    """Return {"url": ..., "headers": {...}}."""
+
+def parse_response(body, base_url) -&gt; list[dict]:
+    """Return post dicts: id, file_url, preview_url, sample_url,
+    post_page_url, tags (list), rating, score, width, height."""
+
+def supports_tag_exclusion() -&gt; bool:      # optional
+    """True if the site understands "-tag", so the blacklist can be
+    applied in the query instead of only filtering the results."""</code></pre>
+
+<p>Add it through <b>Add custom booru</b> → <i>Plugin script</i>; with
+Auto-detect on, the script is tried automatically. Tracebacks show up in the
+dialog log and the network log dock. Plugins need <code>python3</code> on
+<code>PATH</code>, and some need their own modules — the Newgrounds example in
+<code>examples/</code> wants <code>argon2-cffi</code>.</p>
+
+<div class="warn">Plugins run with your full user permissions. Only add
+scripts you trust.</div>
+
+<h2>HTML-scrape bridge</h2>
+
+<p>For Gelbooru-engine sites with no <code>dapi</code>. Not started
+automatically:</p>
+
+<pre><code>pip install flask cloudscraper beautifulsoup4
+python3 tools/html_scrape_bridge.py</code></pre>
+
+<p>It listens on <code>127.0.0.1:8765</code>. Tick <i>This site has no API
+(dapi)</i> when adding the source.</p>
+
+<h2>Appearance and language</h2>
+
+<p>Themes are JSON over <code>QPalette</code>; 20 curated ones ship with the
+app and the system default is one click away. Interface languages: Polish,
+English, German, Danish, Russian, following the system language when it is one
+of those. Window and dock layout survive a restart.</p>
+
+<h2>Safety</h2>
+
+<p>The app writes inside its own data folder and folders you explicitly grant,
+and nowhere else. That is application discipline, not a sandbox — a plugin you
+add runs as you do. Stored API keys and cookies
+(<code>custom_sources.json</code>) are written owner-only (0600).</p>
+
+<h2>Tests</h2>
+
+<p>No network, no visible window:</p>
+
+<pre><code>ctest --test-dir build --output-on-failure</code></pre>
+
+<p>They cover blacklist matching, tag input, response parsing, library paging
+and the rule that a plugin never blocks the GUI thread.</p>
+
+<h2>Data locations</h2>
+
+<ul>
+  <li>Settings: <code>~/.config/blairqt/blairqt.conf</code></li>
+  <li>Library DB, sources, theme: <code>~/.local/share/blairqt/blairqt/</code></li>
+  <li>Thumbnail cache: <code>~/.cache/blairqt/</code></li>
+</ul>
+
+<h2>License</h2>
+
+<p>Copyright (c) 2026 re-v0. Mozilla Public License 2.0 — see the
+<code>LICENSE</code> file in the source tree, which is the unmodified Mozilla
+text.</p>
+
+<p>MPL copyleft is per file: you may combine these files with code under
+another license, but modifications to the files themselves stay MPL and stay
+open.</p>
+
+<div class="colophon">B.LAIR_QT 0.3.0 — re-v0</div>
