@@ -198,6 +198,11 @@ What is left to do:
   image would get a visible `.txt` neighbour,
 - bundle the Qt DLLs with `windeployqt` and ship a zip or an installer.
 
+## Support
+
+Buy me a Linux license — the evil GNU charges me $70 per install:
+[buymeacoffee.com/re_v0](https://buymeacoffee.com/re_v0)
+
 ## License
 
 Copyright (c) 2026 re-v0. Mozilla Public License 2.0 — see [LICENSE](LICENSE),
