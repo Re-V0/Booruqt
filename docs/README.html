@@ -129,6 +129,14 @@
 
   h2:first-of-type { margin-top: 0.6em; }
 
+  h3 {
+    font-family: "JetBrainsMono Nerd Font Mono", monospace;
+    font-weight: 800;
+    font-size: 11pt;
+    margin: 1.5em 0 0.35em;
+    break-after: avoid;
+  }
+
   p { margin: 0 0 0.85em; orphans: 2; widows: 2; }
 
   ul { margin: 0.2em 0 0.9em; padding-left: 1.15em; }
@@ -351,16 +359,31 @@ and the rule that a plugin never blocks the GUI thread.</p>
 <h2>Contributing</h2>
 
 <p>Issues and merge requests are welcome. Before sending a patch, run the
-suite above — it is fast and needs nothing installed.</p>
+tests — they take a second and need no network and no display:</p>
 
-<p><b>Windows:</b> a port is welcome and I will merge it, but I do not run
-Windows, so whoever writes it owns testing it too. Nothing in the code stands
-in the way: there are no POSIX calls, everything goes through Qt, and the app
-already looks for its translations and the plugin runner next to the binary,
-so a portable layout works as-is. What needs doing: resolving
-<code>python3</code> to whatever Python is called on Windows, hiding the tag
-sidecars (a leading dot hides nothing there), and
-<code>windeployqt</code>.</p>
+<pre><code>ctest --test-dir build --output-on-failure</code></pre>
+
+<h3>Windows port</h3>
+
+<p>Welcome, and I will merge it. I do not run Windows, so testing it is
+yours.</p>
+
+<p>The code does not stand in the way. There are no POSIX calls anywhere,
+everything goes through Qt, and the binary already looks for its translations
+and <code>plugin_runner.py</code> next to itself — so a portable layout
+(<code>blairqt.exe</code> beside <code>translations\</code> and
+<code>plugin_runner.py</code>) works with no changes at all.</p>
+
+<p>What is left to do:</p>
+
+<ul>
+  <li>resolve <code>python3</code> to whatever Python is called there
+      (<code>python.exe</code>, or the <code>py -3</code> launcher),</li>
+  <li>hide the tag sidecars — a leading dot hides nothing on Windows, so every
+      image would get a visible <code>.txt</code> neighbour,</li>
+  <li>bundle the Qt DLLs with <code>windeployqt</code> and ship a zip or an
+      installer.</li>
+</ul>
 
 <h2>License</h2>
 

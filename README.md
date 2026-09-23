@@ -168,16 +168,29 @@ the rule that a plugin never blocks the GUI thread.
 
 ## Contributing
 
-Issues and merge requests are welcome. Before sending a patch, run the suite
-above — it is fast and needs nothing installed.
+Issues and merge requests are welcome. Before sending a patch, run the tests —
+they take a second and need no network and no display:
 
-**Windows:** a port is welcome and I will merge it, but I do not run Windows,
-so whoever writes it owns testing it too. Nothing in the code stands in the
-way: there are no POSIX calls, everything goes through Qt, and the app already
-looks for its translations and the plugin runner next to the binary, so a
-portable layout works as-is. What needs doing: resolving `python3` to whatever
-Python is called on Windows, hiding the tag sidecars (a leading dot hides
-nothing there), and `windeployqt`.
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+### Windows port
+
+Welcome, and I will merge it. I do not run Windows, so testing it is yours.
+
+The code does not stand in the way. There are no POSIX calls anywhere,
+everything goes through Qt, and the binary already looks for its translations
+and `plugin_runner.py` next to itself — so a portable layout (`blairqt.exe`
+beside `translations\` and `plugin_runner.py`) works with no changes at all.
+
+What is left to do:
+
+- resolve `python3` to whatever Python is called there (`python.exe`, or the
+  `py -3` launcher),
+- hide the tag sidecars — a leading dot hides nothing on Windows, so every
+  image would get a visible `.txt` neighbour,
+- bundle the Qt DLLs with `windeployqt` and ship a zip or an installer.
 
 ## License
 
