@@ -9,3 +9,4 @@ __pycache__/
 *.aux
 *.log
 *.out
+docs/README.html

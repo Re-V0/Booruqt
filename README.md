@@ -1,6 +1,8 @@
 # B.LAIR_QT
 
-*The name B.LAIR stands for (Booru) Local Archive & Indexing Repository.*
+*The name B.LAIR stands for (Booru) Local Archive & Indexing Repository.
+The `_QT` is not the toolkit — it stands for Cute, which happens to be how
+the toolkit is pronounced anyway.*
 
 A desktop booru client. Qt6, C++, no Electron.
 
