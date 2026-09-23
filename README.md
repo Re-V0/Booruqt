@@ -205,3 +205,9 @@ which is the unmodified Mozilla text.
 
 MPL copyleft is per file: you may combine these files with code under another
 license, but modifications to the files themselves stay MPL and stay open.
+
+**Trademarks.** Qt is a registered trademark of The Qt Company Ltd. B.LAIR_QT
+is an independent project and is neither affiliated with nor endorsed by The
+Qt Company. It links the Qt 6 libraries dynamically under the LGPL-3.0; those
+libraries are not bundled, and replacing them with your own build is both
+allowed and expected.
