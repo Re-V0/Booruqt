@@ -15,6 +15,12 @@ add_executable(blairqt
     src/main.cpp
     src/MainWindow.h
     src/MainWindow.cpp
+    src/SearchTab.h
+    src/SearchTab.cpp
+    src/LibraryTab.h
+    src/LibraryTab.cpp
+    src/GalleryView.h
+    src/GalleryView.cpp
     src/Post.h
     src/Paging.h
     src/AppInfo.h

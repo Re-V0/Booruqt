@@ -261,6 +261,14 @@
     </message>
 </context>
 <context>
+    <name>GalleryView</name>
+    <message>
+        <location filename="../src/GalleryView.cpp" line="55"/>
+        <source>...</source>
+        <translation>...</translation>
+    </message>
+</context>
+<context>
     <name>ImageViewerDialog</name>
     <message>
         <location filename="../src/ImageViewerDialog.cpp" line="57"/>
@@ -284,535 +292,229 @@
     </message>
 </context>
 <context>
-    <name>MainWindow</name>
+    <name>LibraryTab</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2350"/>
+        <location filename="../src/LibraryTab.cpp" line="896"/>
         <source>%1 nie dało się usunąć (brak uprawnień?).</source>
         <translation>Не удалось удалить: %1 (нет прав?).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="124"/>
-        <source>...</source>
-        <translation>...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1135"/>
-        <source>%1: %2 wyników w widoku (strona %3, +%4)</source>
-        <translation>%1: %2 результатов показано (страница %3, +%4)</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="658"/>
-        <source>Autoscroll</source>
-        <translation>Автопрокрутка</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1794"/>
+        <location filename="../src/LibraryTab.cpp" line="394"/>
         <source>Baza biblioteki niedostępna.</source>
         <translation>База данных библиотеки недоступна.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="321"/>
-        <location filename="../src/MainWindow.cpp" line="339"/>
-        <source>Biblioteka</source>
-        <translation>Библиотека</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1853"/>
+        <location filename="../src/LibraryTab.cpp" line="453"/>
         <source>Biblioteka: %1 wyników (z %2 pobranych łącznie)</source>
         <translation>Библиотека: %1 результатов (из %2 всего скачано)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1177"/>
-        <source>Błąd (%1): %2</source>
-        <translation>Ошибка (%1): %2</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="248"/>
-        <source>Błąd pobierania: %1</source>
-        <translation>Ошибка загрузки: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="768"/>
-        <source>+ Dodaj własne booru...</source>
-        <translation>+ Добавить своё бору...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="699"/>
+        <location filename="../src/LibraryTab.cpp" line="205"/>
         <source>filtruj po tagach (puste = wszystko)...</source>
         <translation>фильтр по тегам (пусто = всё)...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1350"/>
-        <location filename="../src/MainWindow.cpp" line="1367"/>
-        <location filename="../src/MainWindow.cpp" line="1374"/>
+        <location filename="../src/LibraryTab.cpp" line="269"/>
+        <location filename="../src/LibraryTab.cpp" line="286"/>
+        <location filename="../src/LibraryTab.cpp" line="293"/>
         <source>Folder pobierania</source>
         <translation>Папка загрузок</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="322"/>
-        <source>Folder pobierania...</source>
-        <translation>Папка загрузок...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="638"/>
-        <source>Infinite scroll</source>
-        <translation>Бесконечная прокрутка</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="547"/>
-        <location filename="../src/MainWindow.cpp" line="581"/>
-        <source>Język</source>
-        <translation>Язык</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="244"/>
-        <source>Już pobrano: %1</source>
-        <translation>Уже скачано: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1296"/>
-        <source>Koniec galerii - autoscroll zatrzymany.</source>
-        <translation>Конец галереи - автопрокрутка остановлена.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1718"/>
-        <location filename="../src/MainWindow.cpp" line="2207"/>
+        <location filename="../src/LibraryTab.cpp" line="796"/>
         <source>Kopiuj obraz do schowka</source>
         <translation>Копировать изображение в буфер обмена</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2214"/>
+        <location filename="../src/LibraryTab.cpp" line="803"/>
         <source>Kopiuj ścieżkę pliku</source>
         <translation>Копировать путь к файлу</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2242"/>
+        <location filename="../src/LibraryTab.cpp" line="831"/>
         <source>Kopiuj tagi</source>
         <translation>Копировать теги</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="346"/>
-        <source>Log sieciowy</source>
-        <translation>Сетевой журнал</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="637"/>
-        <source>Nast. ▶</source>
-        <translation>След. ▶</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2193"/>
+        <location filename="../src/LibraryTab.cpp" line="782"/>
         <source>Otwórz plik</source>
         <translation>Открыть файл</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1743"/>
-        <location filename="../src/MainWindow.cpp" line="2249"/>
+        <location filename="../src/LibraryTab.cpp" line="838"/>
         <source>Otwórz stronę posta w przeglądarce</source>
         <translation>Открыть страницу поста в браузере</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1343"/>
-        <source>Pobieranie %1 plik(ów) do %2...</source>
-        <translation>Скачивание %1 файл(ов) в %2...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="640"/>
-        <location filename="../src/MainWindow.cpp" line="1333"/>
-        <source>Pobierz zaznaczone</source>
-        <translation>Скачать выбранное</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1332"/>
-        <location filename="../src/MainWindow.cpp" line="1710"/>
-        <source>Pobierz zaznaczone (%1)</source>
-        <translation>Скачать выбранное (%1)</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2199"/>
+        <location filename="../src/LibraryTab.cpp" line="788"/>
         <source>Pokaż w menedżerze plików</source>
         <translation>Показать в файловом менеджере</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="633"/>
-        <source>◀ Poprz.</source>
-        <translation>◀ Пред.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1175"/>
-        <source>przekroczono limit czasu (%1s) - sprawdź URL/połączenie</source>
-        <translation>истекло время ожидания (%1с) - проверьте URL/соединение</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="627"/>
-        <location filename="../src/MainWindow.cpp" line="711"/>
+        <location filename="../src/LibraryTab.cpp" line="217"/>
         <source>Rozmiar miniatur:</source>
         <translation>Размер миниатюр:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="646"/>
-        <source>Strona:</source>
-        <translation>Страница:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="355"/>
-        <source>Szczegóły</source>
-        <translation>Подробности</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="612"/>
-        <source>Szukaj</source>
-        <translation>Поиск</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="700"/>
+        <location filename="../src/LibraryTab.cpp" line="206"/>
         <source>Szukaj w bibliotece</source>
         <translation>Поиск в библиотеке</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="659"/>
-        <source>Szybkość:</source>
-        <translation>Скорость:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="611"/>
-        <source>tag1 tag2 tag3...</source>
-        <translation>tag1 tag2 tag3...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="309"/>
-        <source>Ustawienia</source>
-        <translation>Настройки</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="639"/>
-        <location filename="../src/MainWindow.cpp" line="701"/>
+        <location filename="../src/LibraryTab.cpp" line="207"/>
         <source>Wczytaj więcej</source>
         <translation>Загрузить ещё</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="311"/>
-        <location filename="../src/MainWindow.cpp" line="338"/>
-        <source>Wyszukiwanie</source>
-        <translation>Поиск</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1060"/>
-        <source>Wyszukiwanie w %1 (strona %2)...</source>
-        <translation>Поиск в %1 (страница %2)...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="246"/>
-        <source>Zapisano: %1</source>
-        <translation>Сохранено: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="314"/>
-        <source>Przywróć domyślne źródła</source>
-        <translation>Восстановить источники по умолчанию</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="606"/>
-        <location filename="../src/MainWindow.cpp" line="783"/>
-        <source>Wybierz kilka źródeł...</source>
-        <translation>Выбрать несколько источников...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="607"/>
-        <source>Przeszukaj kilka booru naraz - wyniki lądują we wspólnej galerii</source>
-        <translation>Искать сразу в нескольких бору - результаты попадают в общую галерею</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="608"/>
-        <source>Usuń</source>
-        <translation>Удалить</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="609"/>
-        <source>Usuń bieżące źródło z listy</source>
-        <translation>Удалить текущий источник из списка</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1059"/>
-        <source>%1 źródłach</source>
-        <translation>%1 источниках</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="795"/>
-        <source>%1 źródeł zaznaczonych (zmień...)</source>
-        <translation>Выбрано источников: %1 (изменить...)</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="832"/>
-        <source>Wybierz źródła do przeszukania</source>
-        <translation>Выберите источники для поиска</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="926"/>
-        <source>Usuń źródło</source>
-        <translation>Удалить источник</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="927"/>
-        <source>Na pewno usunąć &quot;%1&quot; z listy źródeł?</source>
-        <translation>Удалить «%1» из списка источников?</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1029"/>
-        <source>Nie wybrano żadnego źródła.</source>
-        <translation>Источник не выбран.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="947"/>
-        <source>Przywrócono domyślną listę źródeł.</source>
-        <translation>Список источников по умолчанию восстановлен.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1134"/>
-        <source>%1 źródeł</source>
-        <translation>%1 источников</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2257"/>
+        <location filename="../src/LibraryTab.cpp" line="846"/>
         <source>Usuń z dysku i biblioteki (%1)</source>
         <translation>Удалить с диска и из библиотеки (%1)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2269"/>
+        <location filename="../src/LibraryTab.cpp" line="858"/>
         <source>Usuń z biblioteki</source>
         <translation>Удалить из библиотеки</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2270"/>
+        <location filename="../src/LibraryTab.cpp" line="859"/>
         <source>Trwale usunąć %1 plik(ów) z dysku i biblioteki? Tej operacji nie można cofnąć.</source>
         <translation>Безвозвратно удалить %1 файл(ов) с диска и из библиотеки? Это действие нельзя отменить.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2293"/>
+        <location filename="../src/LibraryTab.cpp" line="893"/>
         <source>Usunięto %1 plik(ów) (%2 wszystkich w bibliotece).</source>
         <translation>Удалено файлов: %1 (всего в библиотеке: %2).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="316"/>
-        <source>Wyników na stronę...</source>
-        <translation>Результатов на странице...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1454"/>
-        <source>Wyników na stronę</source>
-        <translation>Результатов на странице</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1455"/>
-        <source>Ile wyników pobierać na stronę (na źródło):</source>
-        <translation>Сколько результатов загружать на страницу (на источник):</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="684"/>
+        <location filename="../src/LibraryTab.cpp" line="190"/>
         <source>Folder:</source>
         <translation>Папка:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="689"/>
-        <location filename="../src/MainWindow.cpp" line="2232"/>
+        <location filename="../src/LibraryTab.cpp" line="195"/>
+        <location filename="../src/LibraryTab.cpp" line="821"/>
         <source>Nowy folder...</source>
         <translation>Новая папка...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1869"/>
+        <location filename="../src/LibraryTab.cpp" line="469"/>
         <source>(wszystkie foldery)</source>
         <translation>(все папки)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="729"/>
-        <location filename="../src/MainWindow.cpp" line="1870"/>
+        <location filename="../src/LibraryTab.cpp" line="235"/>
+        <location filename="../src/LibraryTab.cpp" line="470"/>
         <source>(folder główny)</source>
         <translation>(корневая папка)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1964"/>
-        <location filename="../src/MainWindow.cpp" line="1969"/>
-        <location filename="../src/MainWindow.cpp" line="1976"/>
-        <location filename="../src/MainWindow.cpp" line="2235"/>
+        <location filename="../src/LibraryTab.cpp" line="564"/>
+        <location filename="../src/LibraryTab.cpp" line="569"/>
+        <location filename="../src/LibraryTab.cpp" line="576"/>
+        <location filename="../src/LibraryTab.cpp" line="824"/>
         <source>Nowy folder</source>
         <translation>Новая папка</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1964"/>
-        <location filename="../src/MainWindow.cpp" line="2235"/>
+        <location filename="../src/LibraryTab.cpp" line="564"/>
+        <location filename="../src/LibraryTab.cpp" line="824"/>
         <source>Nazwa folderu:</source>
         <translation>Название папки:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1969"/>
+        <location filename="../src/LibraryTab.cpp" line="569"/>
         <source>Nazwa folderu nie może zawierać &quot;/&quot; ani &quot;\&quot;.</source>
         <translation>Название папки не может содержать «/» или «\».</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2219"/>
+        <location filename="../src/LibraryTab.cpp" line="808"/>
         <source>Przenieś do... (%1)</source>
         <translation>Переместить в... (%1)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2220"/>
+        <location filename="../src/LibraryTab.cpp" line="809"/>
         <source>Folder główny</source>
         <translation>Корневая папка</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2142"/>
+        <location filename="../src/LibraryTab.cpp" line="746"/>
         <source>Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu albo błąd zapisu).</source>
         <translation>Перемещено файлов: %1, пропущено: %2 (файл с таким именем там уже существует или ошибка записи).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2143"/>
+        <location filename="../src/LibraryTab.cpp" line="747"/>
         <source>Przeniesiono %1 plik(ów).</source>
         <translation>Перемещено файлов: %1.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="690"/>
+        <location filename="../src/LibraryTab.cpp" line="196"/>
         <source>Usuń folder...</source>
         <translation>Удалить папку...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="277"/>
-        <source>Brak źródeł startowych - wybierz źródło powyżej lub w Ustawieniach.</source>
-        <translation>Нет стартовых источников - выберите один выше или в Настройках.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="312"/>
-        <source>Źródła startowe...</source>
-        <translation>Стартовые источники...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="876"/>
-        <source>Witamy w B.LAIR_QT</source>
-        <translation>Добро пожаловать в B.LAIR_QT</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="876"/>
-        <source>Źródła startowe</source>
-        <translation>Стартовые источники</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="880"/>
-        <source>Niektóre serwisy booru domyślnie pokazują treści dla dorosłych. Wybierz źródła, które mają wczytać się zaraz po uruchomieniu - listę możesz zostawić pustą, aby zacząć od pustej karty Wyszukiwanie.</source>
-        <translation>Некоторые сайты booru по умолчанию показывают контент для взрослых. Выберите источники, которые должны загрузиться сразу после запуска - список можно оставить пустым, чтобы начать с пустой вкладки Поиск.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1476"/>
-        <source>Foldery, do których B.LAIR_QT ma dostęp:</source>
-        <translation>Папки, к которым имеет доступ B.LAIR_QT:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2004"/>
-        <location filename="../src/MainWindow.cpp" line="2014"/>
-        <location filename="../src/MainWindow.cpp" line="2034"/>
+        <location filename="../src/LibraryTab.cpp" line="604"/>
+        <location filename="../src/LibraryTab.cpp" line="614"/>
+        <location filename="../src/LibraryTab.cpp" line="634"/>
         <source>Usuń folder</source>
         <translation>Удалить папку</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2030"/>
+        <location filename="../src/LibraryTab.cpp" line="630"/>
         <source>Usunąć pusty folder &quot;%1&quot;?</source>
         <translation>Удалить пустую папку «%1»?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2031"/>
+        <location filename="../src/LibraryTab.cpp" line="631"/>
         <source>Folder &quot;%1&quot; zawiera %2 plik(ów). Zostaną przeniesione do folderu głównego, a pusty folder zostanie usunięty. Kontynuować?</source>
         <translation>Папка «%1» содержит %2 файл(ов). Они будут перемещены в корневую папку, после чего теперь пустая папка будет удалена. Продолжить?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2077"/>
+        <location filename="../src/LibraryTab.cpp" line="680"/>
         <source>Nie udało się usunąć folderu &quot;%1&quot; - %2 plik(ów) nie dało się przenieść.</source>
         <translation>Не удалось удалить папку «%1» - не удалось переместить %2 файл(ов).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2084"/>
+        <location filename="../src/LibraryTab.cpp" line="687"/>
         <source>Nie udało się usunąć folderu &quot;%1&quot; - zostało w nim %2 ukrytych plików.</source>
         <translation>Не удалось удалить папку &quot;%1&quot; - в ней осталось скрытых файлов: %2.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2087"/>
+        <location filename="../src/LibraryTab.cpp" line="690"/>
         <source>Usunięto folder &quot;%1&quot;, przeniesiono %2 plik(ów) do folderu głównego.</source>
         <translation>Папка «%1» удалена, перемещено %2 файл(ов) в корневую папку.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2090"/>
+        <location filename="../src/LibraryTab.cpp" line="693"/>
         <source>Usunięto pusty folder &quot;%1&quot;.</source>
         <translation>Пустая папка «%1» удалена.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="686"/>
+        <location filename="../src/LibraryTab.cpp" line="192"/>
         <source>Widok drzewa</source>
         <translation>Древовидный вид</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="688"/>
+        <location filename="../src/LibraryTab.cpp" line="194"/>
         <source>z podfolderami</source>
         <translation>с подпапками</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2015"/>
+        <location filename="../src/LibraryTab.cpp" line="615"/>
         <source>Folder &quot;%1&quot; zawiera podfoldery (%2) - usuń je najpierw.</source>
         <translation>Папка «%1» содержит подпапки (%2) - сначала удалите их.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="324"/>
-        <source>Dostęp do folderów...</source>
-        <translation>Доступ к папкам...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="318"/>
-        <source>Czarna lista tagów...</source>
-        <translation>Чёрный список тегов...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="330"/>
-        <source>Otwórz plik motywu (JSON)...</source>
-        <translation>Открыть файл темы (JSON)...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="332"/>
-        <source>Przeładuj motyw</source>
-        <translation>Перезагрузить тему</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="328"/>
-        <source>Wybierz gotowy motyw...</source>
-        <translation>Выбрать готовую тему...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="327"/>
-        <source>Wygląd</source>
-        <translation>Оформление</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="582"/>
-        <source>Zmiana języka wymaga ponownego uruchomienia aplikacji. Uruchomić ponownie teraz?</source>
-        <translation>Смена языка требует перезапуска приложения. Перезапустить сейчас?</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1138"/>
-        <location filename="../src/MainWindow.cpp" line="1856"/>
+        <location filename="../src/LibraryTab.cpp" line="456"/>
         <source>- ukryto %1 przez czarną listę</source>
         <translation>- скрыто чёрным списком: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1151"/>
-        <source>Czarna lista ukryła %1 kolejnych stron - przewiń, aby szukać dalej.</source>
-        <translation>Чёрный список скрыл %1 страниц подряд - прокрутите, чтобы искать дальше.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1321"/>
-        <source>Strony są nieaktywne, dopóki działa infinite scroll lub autoscroll.</source>
-        <translation>Постраничная навигация отключена, пока включён infinite scroll или автопрокрутка.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1368"/>
+        <location filename="../src/LibraryTab.cpp" line="287"/>
         <source>Jeden z folderów zawiera się w drugim, więc pliki nie zostaną przeniesione. Folder pobierania zostanie zmieniony, a dotychczasowe pliki zostaną na miejscu.</source>
         <translation>Одна папка находится внутри другой, поэтому файлы не будут перемещены. Папка загрузки будет изменена, а имеющиеся файлы останутся на месте.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1375"/>
+        <location filename="../src/LibraryTab.cpp" line="294"/>
         <source>W starym folderze jest %1 plik(ów) z biblioteki. Przenieść je razem z podfolderami i tagami do nowego folderu?
 
 Nie - pliki zostaną w starym miejscu i będą widoczne tylko w &quot;(wszystkie foldery)&quot;.</source>
@@ -821,131 +523,458 @@ Nie - pliki zostaną w starym miejscu i będą widoczne tylko w &quot;(wszystkie
 Нет - файлы останутся на месте и будут видны только в &quot;(все папки)&quot;.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1406"/>
+        <location filename="../src/LibraryTab.cpp" line="325"/>
         <source>Przenoszenie biblioteki...</source>
         <translation>Перемещение библиотеки...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1406"/>
+        <location filename="../src/LibraryTab.cpp" line="325"/>
         <source>Anuluj</source>
         <translation>Отмена</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1434"/>
+        <location filename="../src/LibraryTab.cpp" line="364"/>
         <source>Przeniesiono %1 plik(ów) do %2.</source>
         <translation>Перемещено файлов: %1 в %2.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1435"/>
+        <location filename="../src/LibraryTab.cpp" line="365"/>
         <source>Przeniesiono %1 plik(ów) do %2, %3 pominiętych (plik już istnieje, brak pliku lub błąd zapisu).</source>
         <translation>Перемещено файлов: %1 в %2, пропущено: %3 (файл уже существует, отсутствует или ошибка записи).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1472"/>
+        <location filename="../src/LibraryTab.cpp" line="576"/>
+        <location filename="../src/LibraryTab.cpp" line="604"/>
+        <location filename="../src/LibraryTab.cpp" line="706"/>
+        <source>Ta lokalizacja jest poza dozwolonym zakresem dostępu.</source>
+        <translation>Это расположение находится за пределами разрешённой области доступа.</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="134"/>
+        <location filename="../src/MainWindow.cpp" line="153"/>
+        <source>Biblioteka</source>
+        <translation>Библиотека</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="80"/>
+        <source>Błąd pobierania: %1</source>
+        <translation>Ошибка загрузки: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="135"/>
+        <source>Folder pobierania...</source>
+        <translation>Папка загрузок...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="209"/>
+        <location filename="../src/MainWindow.cpp" line="243"/>
+        <source>Język</source>
+        <translation>Язык</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="76"/>
+        <source>Już pobrano: %1</source>
+        <translation>Уже скачано: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="160"/>
+        <source>Log sieciowy</source>
+        <translation>Сетевой журнал</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="169"/>
+        <source>Szczegóły</source>
+        <translation>Подробности</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="125"/>
+        <source>Ustawienia</source>
+        <translation>Настройки</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="127"/>
+        <location filename="../src/MainWindow.cpp" line="151"/>
+        <source>Wyszukiwanie</source>
+        <translation>Поиск</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="78"/>
+        <source>Zapisano: %1</source>
+        <translation>Сохранено: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="129"/>
+        <source>Przywróć domyślne źródła</source>
+        <translation>Восстановить источники по умолчанию</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="130"/>
+        <source>Wyników na stronę...</source>
+        <translation>Результатов на странице...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="128"/>
+        <source>Źródła startowe...</source>
+        <translation>Стартовые источники...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="269"/>
+        <source>Foldery, do których B.LAIR_QT ma dostęp:</source>
+        <translation>Папки, к которым имеет доступ B.LAIR_QT:</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="136"/>
+        <source>Dostęp do folderów...</source>
+        <translation>Доступ к папкам...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="131"/>
+        <source>Czarna lista tagów...</source>
+        <translation>Чёрный список тегов...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="142"/>
+        <source>Otwórz plik motywu (JSON)...</source>
+        <translation>Открыть файл темы (JSON)...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="144"/>
+        <source>Przeładuj motyw</source>
+        <translation>Перезагрузить тему</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="140"/>
+        <source>Wybierz gotowy motyw...</source>
+        <translation>Выбрать готовую тему...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="139"/>
+        <source>Wygląd</source>
+        <translation>Оформление</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="244"/>
+        <source>Zmiana języka wymaga ponownego uruchomienia aplikacji. Uruchomić ponownie teraz?</source>
+        <translation>Смена языка требует перезапуска приложения. Перезапустить сейчас?</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="265"/>
         <source>Dostęp do folderów</source>
         <translation>Доступ к папкам</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1482"/>
+        <location filename="../src/MainWindow.cpp" line="275"/>
         <source>%1 (dane aplikacji)</source>
         <translation>%1 (данные приложения)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1484"/>
+        <location filename="../src/MainWindow.cpp" line="277"/>
         <source>%1 (folder pobierania)</source>
         <translation>%1 (папка загрузок)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1499"/>
+        <location filename="../src/MainWindow.cpp" line="292"/>
         <source>Dodaj folder...</source>
         <translation>Добавить папку...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1500"/>
+        <location filename="../src/MainWindow.cpp" line="293"/>
         <source>Usuń zaznaczony</source>
         <translation>Удалить выбранное</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1512"/>
+        <location filename="../src/MainWindow.cpp" line="305"/>
         <source>Wybierz folder</source>
         <translation>Выбрать папку</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1548"/>
+        <location filename="../src/MainWindow.cpp" line="341"/>
         <source>Czarna lista tagów</source>
         <translation>Чёрный список тегов</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1552"/>
+        <location filename="../src/MainWindow.cpp" line="345"/>
         <source>Jeden tag w linii. Posty z tymi tagami nie trafią do wyników. Gdy serwis to obsługuje, tagi są wykluczane już w zapytaniu, a w pozostałych wypadkach wyniki są filtrowane po pobraniu. Dopasowanie jest dokładne, więc &quot;solo&quot; nie ukryje &quot;solo_focus&quot;.</source>
         <translation>По одному тегу в строке. Посты с этими тегами не попадут в результаты. Где сайт это поддерживает, теги исключаются прямо в запросе, иначе результаты фильтруются после загрузки. Совпадение точное, поэтому &quot;solo&quot; не скроет &quot;solo_focus&quot;.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1569"/>
+        <location filename="../src/MainWindow.cpp" line="362"/>
         <source>(wszystkie źródła)</source>
         <translation>(все источники)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1582"/>
+        <location filename="../src/MainWindow.cpp" line="375"/>
         <source>Stosuj też w Bibliotece (ukrywa pobrane pliki)</source>
         <translation>Применять и в Библиотеке (скрывает скачанные файлы)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1636"/>
+        <location filename="../src/MainWindow.cpp" line="429"/>
         <source>Motyw przeładowany.</source>
         <translation>Тема перезагружена.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1654"/>
+        <location filename="../src/MainWindow.cpp" line="445"/>
         <source>Wybierz gotowy motyw</source>
         <translation>Выбрать готовую тему</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1663"/>
+        <location filename="../src/MainWindow.cpp" line="454"/>
         <source>Motyw domyślny (systemowy)</source>
         <translation>Тема по умолчанию (системная)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1695"/>
+        <location filename="../src/MainWindow.cpp" line="486"/>
         <source>Zastosowano motyw: %1</source>
         <translation>Применена тема: %1</translation>
     </message>
+</context>
+<context>
+    <name>SearchTab</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1720"/>
+        <location filename="../src/SearchTab.cpp" line="693"/>
+        <source>%1: %2 wyników w widoku (strona %3, +%4)</source>
+        <translation>%1: %2 результатов показано (страница %3, +%4)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="333"/>
+        <source>Autoscroll</source>
+        <translation>Автопрокрутка</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="735"/>
+        <source>Błąd (%1): %2</source>
+        <translation>Ошибка (%1): %2</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="354"/>
+        <source>+ Dodaj własne booru...</source>
+        <translation>+ Добавить своё бору...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="313"/>
+        <source>Infinite scroll</source>
+        <translation>Бесконечная прокрутка</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="839"/>
+        <source>Koniec galerii - autoscroll zatrzymany.</source>
+        <translation>Конец галереи - автопрокрутка остановлена.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="927"/>
+        <source>Kopiuj obraz do schowka</source>
+        <translation>Копировать изображение в буфер обмена</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="312"/>
+        <source>Nast. ▶</source>
+        <translation>След. ▶</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="952"/>
+        <source>Otwórz stronę posta w przeglądarce</source>
+        <translation>Открыть страницу поста в браузере</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="886"/>
+        <source>Pobieranie %1 plik(ów) do %2...</source>
+        <translation>Скачивание %1 файл(ов) в %2...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="315"/>
+        <location filename="../src/SearchTab.cpp" line="876"/>
+        <source>Pobierz zaznaczone</source>
+        <translation>Скачать выбранное</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="875"/>
+        <location filename="../src/SearchTab.cpp" line="919"/>
+        <source>Pobierz zaznaczone (%1)</source>
+        <translation>Скачать выбранное (%1)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="308"/>
+        <source>◀ Poprz.</source>
+        <translation>◀ Пред.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="733"/>
+        <source>przekroczono limit czasu (%1s) - sprawdź URL/połączenie</source>
+        <translation>истекло время ожидания (%1с) - проверьте URL/соединение</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="302"/>
+        <source>Rozmiar miniatur:</source>
+        <translation>Размер миниатюр:</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="321"/>
+        <source>Strona:</source>
+        <translation>Страница:</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="287"/>
+        <source>Szukaj</source>
+        <translation>Поиск</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="334"/>
+        <source>Szybkość:</source>
+        <translation>Скорость:</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="286"/>
+        <source>tag1 tag2 tag3...</source>
+        <translation>tag1 tag2 tag3...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="314"/>
+        <source>Wczytaj więcej</source>
+        <translation>Загрузить ещё</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="618"/>
+        <source>Wyszukiwanie w %1 (strona %2)...</source>
+        <translation>Поиск в %1 (страница %2)...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="281"/>
+        <location filename="../src/SearchTab.cpp" line="369"/>
+        <source>Wybierz kilka źródeł...</source>
+        <translation>Выбрать несколько источников...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="282"/>
+        <source>Przeszukaj kilka booru naraz - wyniki lądują we wspólnej galerii</source>
+        <translation>Искать сразу в нескольких бору - результаты попадают в общую галерею</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="283"/>
+        <source>Usuń</source>
+        <translation>Удалить</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="284"/>
+        <source>Usuń bieżące źródło z listy</source>
+        <translation>Удалить текущий источник из списка</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="617"/>
+        <source>%1 źródłach</source>
+        <translation>%1 источниках</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="381"/>
+        <source>%1 źródeł zaznaczonych (zmień...)</source>
+        <translation>Выбрано источников: %1 (изменить...)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="418"/>
+        <source>Wybierz źródła do przeszukania</source>
+        <translation>Выберите источники для поиска</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="512"/>
+        <source>Usuń źródło</source>
+        <translation>Удалить источник</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="513"/>
+        <source>Na pewno usunąć &quot;%1&quot; z listy źródeł?</source>
+        <translation>Удалить «%1» из списка источников?</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="589"/>
+        <source>Nie wybrano żadnego źródła.</source>
+        <translation>Источник не выбран.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="533"/>
+        <source>Przywrócono domyślną listę źródeł.</source>
+        <translation>Список источников по умолчанию восстановлен.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="692"/>
+        <source>%1 źródeł</source>
+        <translation>%1 источников</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="893"/>
+        <source>Wyników na stronę</source>
+        <translation>Результатов на странице</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="894"/>
+        <source>Ile wyników pobierać na stronę (na źródło):</source>
+        <translation>Сколько результатов загружать на страницу (на источник):</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="136"/>
+        <source>Brak źródeł startowych - wybierz źródło powyżej lub w Ustawieniach.</source>
+        <translation>Нет стартовых источников - выберите один выше или в Настройках.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="462"/>
+        <source>Witamy w B.LAIR_QT</source>
+        <translation>Добро пожаловать в B.LAIR_QT</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="462"/>
+        <source>Źródła startowe</source>
+        <translation>Стартовые источники</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="466"/>
+        <source>Niektóre serwisy booru domyślnie pokazują treści dla dorosłych. Wybierz źródła, które mają wczytać się zaraz po uruchomieniu - listę możesz zostawić pustą, aby zacząć od pustej karty Wyszukiwanie.</source>
+        <translation>Некоторые сайты booru по умолчанию показывают контент для взрослых. Выберите источники, которые должны загрузиться сразу после запуска - список можно оставить пустым, чтобы начать с пустой вкладки Поиск.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="696"/>
+        <source>- ukryto %1 przez czarną listę</source>
+        <translation>- скрыто чёрным списком: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="709"/>
+        <source>Czarna lista ukryła %1 kolejnych stron - przewiń, aby szukać dalej.</source>
+        <translation>Чёрный список скрыл %1 страниц подряд - прокрутите, чтобы искать дальше.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="864"/>
+        <source>Strony są nieaktywne, dopóki działa infinite scroll lub autoscroll.</source>
+        <translation>Постраничная навигация отключена, пока включён infinite scroll или автопрокрутка.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="929"/>
         <source>Kopiowanie obrazu do schowka...</source>
         <translation>Копирование изображения в буфер обмена...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1728"/>
+        <location filename="../src/SearchTab.cpp" line="937"/>
         <source>Nie udało się skopiować obrazu: %1</source>
         <translation>Не удалось скопировать изображение: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1733"/>
+        <location filename="../src/SearchTab.cpp" line="942"/>
         <source>Nie udało się zdekodować obrazu.</source>
         <translation>Не удалось декодировать изображение.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1737"/>
+        <location filename="../src/SearchTab.cpp" line="946"/>
         <source>Skopiowano obraz do schowka.</source>
         <translation>Изображение скопировано в буфер обмена.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1752"/>
+        <location filename="../src/SearchTab.cpp" line="961"/>
         <source>Dodaj tag do czarnej listy</source>
         <translation>Добавить тег в чёрный список</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1757"/>
+        <location filename="../src/SearchTab.cpp" line="966"/>
         <source>Dodano &quot;%1&quot; do czarnej listy.</source>
         <translation>Тег &quot;%1&quot; добавлен в чёрный список.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1976"/>
-        <location filename="../src/MainWindow.cpp" line="2004"/>
-        <location filename="../src/MainWindow.cpp" line="2103"/>
-        <source>Ta lokalizacja jest poza dozwolonym zakresem dostępu.</source>
-        <translation>Это расположение находится за пределами разрешённой области доступа.</translation>
     </message>
 </context>
 </TS>

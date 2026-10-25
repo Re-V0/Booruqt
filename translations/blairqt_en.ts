@@ -261,6 +261,14 @@
     </message>
 </context>
 <context>
+    <name>GalleryView</name>
+    <message>
+        <location filename="../src/GalleryView.cpp" line="55"/>
+        <source>...</source>
+        <translation>...</translation>
+    </message>
+</context>
+<context>
     <name>ImageViewerDialog</name>
     <message>
         <location filename="../src/ImageViewerDialog.cpp" line="57"/>
@@ -284,535 +292,229 @@
     </message>
 </context>
 <context>
-    <name>MainWindow</name>
+    <name>LibraryTab</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2350"/>
+        <location filename="../src/LibraryTab.cpp" line="896"/>
         <source>%1 nie dało się usunąć (brak uprawnień?).</source>
         <translation>%1 could not be deleted (missing permission?).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="124"/>
-        <source>...</source>
-        <translation>...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1135"/>
-        <source>%1: %2 wyników w widoku (strona %3, +%4)</source>
-        <translation>%1: %2 results shown (page %3, +%4)</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="658"/>
-        <source>Autoscroll</source>
-        <translation>Autoscroll</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1794"/>
+        <location filename="../src/LibraryTab.cpp" line="394"/>
         <source>Baza biblioteki niedostępna.</source>
         <translation>Library database unavailable.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="321"/>
-        <location filename="../src/MainWindow.cpp" line="339"/>
-        <source>Biblioteka</source>
-        <translation>Library</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1853"/>
+        <location filename="../src/LibraryTab.cpp" line="453"/>
         <source>Biblioteka: %1 wyników (z %2 pobranych łącznie)</source>
         <translation>Library: %1 results (of %2 downloaded total)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1177"/>
-        <source>Błąd (%1): %2</source>
-        <translation>Error (%1): %2</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="248"/>
-        <source>Błąd pobierania: %1</source>
-        <translation>Download error: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="768"/>
-        <source>+ Dodaj własne booru...</source>
-        <translation>+ Add custom booru...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="699"/>
+        <location filename="../src/LibraryTab.cpp" line="205"/>
         <source>filtruj po tagach (puste = wszystko)...</source>
         <translation>filter by tags (empty = everything)...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1350"/>
-        <location filename="../src/MainWindow.cpp" line="1367"/>
-        <location filename="../src/MainWindow.cpp" line="1374"/>
+        <location filename="../src/LibraryTab.cpp" line="269"/>
+        <location filename="../src/LibraryTab.cpp" line="286"/>
+        <location filename="../src/LibraryTab.cpp" line="293"/>
         <source>Folder pobierania</source>
         <translation>Download folder</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="322"/>
-        <source>Folder pobierania...</source>
-        <translation>Download folder...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="638"/>
-        <source>Infinite scroll</source>
-        <translation>Infinite scroll</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="547"/>
-        <location filename="../src/MainWindow.cpp" line="581"/>
-        <source>Język</source>
-        <translation>Language</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="244"/>
-        <source>Już pobrano: %1</source>
-        <translation>Already downloaded: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1296"/>
-        <source>Koniec galerii - autoscroll zatrzymany.</source>
-        <translation>End of gallery - autoscroll stopped.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1718"/>
-        <location filename="../src/MainWindow.cpp" line="2207"/>
+        <location filename="../src/LibraryTab.cpp" line="796"/>
         <source>Kopiuj obraz do schowka</source>
         <translation>Copy image to clipboard</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2214"/>
+        <location filename="../src/LibraryTab.cpp" line="803"/>
         <source>Kopiuj ścieżkę pliku</source>
         <translation>Copy file path</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2242"/>
+        <location filename="../src/LibraryTab.cpp" line="831"/>
         <source>Kopiuj tagi</source>
         <translation>Copy tags</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="346"/>
-        <source>Log sieciowy</source>
-        <translation>Network log</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="637"/>
-        <source>Nast. ▶</source>
-        <translation>Next ▶</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2193"/>
+        <location filename="../src/LibraryTab.cpp" line="782"/>
         <source>Otwórz plik</source>
         <translation>Open file</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1743"/>
-        <location filename="../src/MainWindow.cpp" line="2249"/>
+        <location filename="../src/LibraryTab.cpp" line="838"/>
         <source>Otwórz stronę posta w przeglądarce</source>
         <translation>Open post page in browser</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1343"/>
-        <source>Pobieranie %1 plik(ów) do %2...</source>
-        <translation>Downloading %1 file(s) to %2...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="640"/>
-        <location filename="../src/MainWindow.cpp" line="1333"/>
-        <source>Pobierz zaznaczone</source>
-        <translation>Download selected</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1332"/>
-        <location filename="../src/MainWindow.cpp" line="1710"/>
-        <source>Pobierz zaznaczone (%1)</source>
-        <translation>Download selected (%1)</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2199"/>
+        <location filename="../src/LibraryTab.cpp" line="788"/>
         <source>Pokaż w menedżerze plików</source>
         <translation>Show in file manager</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="633"/>
-        <source>◀ Poprz.</source>
-        <translation>◀ Prev</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1175"/>
-        <source>przekroczono limit czasu (%1s) - sprawdź URL/połączenie</source>
-        <translation>timed out (%1s) - check the URL/connection</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="627"/>
-        <location filename="../src/MainWindow.cpp" line="711"/>
+        <location filename="../src/LibraryTab.cpp" line="217"/>
         <source>Rozmiar miniatur:</source>
         <translation>Thumbnail size:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="646"/>
-        <source>Strona:</source>
-        <translation>Page:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="355"/>
-        <source>Szczegóły</source>
-        <translation>Details</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="612"/>
-        <source>Szukaj</source>
-        <translation>Search</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="700"/>
+        <location filename="../src/LibraryTab.cpp" line="206"/>
         <source>Szukaj w bibliotece</source>
         <translation>Search library</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="659"/>
-        <source>Szybkość:</source>
-        <translation>Speed:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="611"/>
-        <source>tag1 tag2 tag3...</source>
-        <translation>tag1 tag2 tag3...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="309"/>
-        <source>Ustawienia</source>
-        <translation>Settings</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="639"/>
-        <location filename="../src/MainWindow.cpp" line="701"/>
+        <location filename="../src/LibraryTab.cpp" line="207"/>
         <source>Wczytaj więcej</source>
         <translation>Load more</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="311"/>
-        <location filename="../src/MainWindow.cpp" line="338"/>
-        <source>Wyszukiwanie</source>
-        <translation>Search</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1060"/>
-        <source>Wyszukiwanie w %1 (strona %2)...</source>
-        <translation>Searching %1 (page %2)...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="246"/>
-        <source>Zapisano: %1</source>
-        <translation>Saved: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="314"/>
-        <source>Przywróć domyślne źródła</source>
-        <translation>Restore default sources</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="606"/>
-        <location filename="../src/MainWindow.cpp" line="783"/>
-        <source>Wybierz kilka źródeł...</source>
-        <translation>Select multiple sources...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="607"/>
-        <source>Przeszukaj kilka booru naraz - wyniki lądują we wspólnej galerii</source>
-        <translation>Search several boorus at once - results land in one shared gallery</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="608"/>
-        <source>Usuń</source>
-        <translation>Remove</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="609"/>
-        <source>Usuń bieżące źródło z listy</source>
-        <translation>Remove the current source from the list</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1059"/>
-        <source>%1 źródłach</source>
-        <translation>%1 sources</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="795"/>
-        <source>%1 źródeł zaznaczonych (zmień...)</source>
-        <translation>%1 sources selected (change...)</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="832"/>
-        <source>Wybierz źródła do przeszukania</source>
-        <translation>Select sources to search</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="926"/>
-        <source>Usuń źródło</source>
-        <translation>Remove source</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="927"/>
-        <source>Na pewno usunąć &quot;%1&quot; z listy źródeł?</source>
-        <translation>Remove &quot;%1&quot; from the source list?</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1029"/>
-        <source>Nie wybrano żadnego źródła.</source>
-        <translation>No source selected.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="947"/>
-        <source>Przywrócono domyślną listę źródeł.</source>
-        <translation>Default source list restored.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1134"/>
-        <source>%1 źródeł</source>
-        <translation>%1 sources</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2257"/>
+        <location filename="../src/LibraryTab.cpp" line="846"/>
         <source>Usuń z dysku i biblioteki (%1)</source>
         <translation>Delete from disk and library (%1)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2269"/>
+        <location filename="../src/LibraryTab.cpp" line="858"/>
         <source>Usuń z biblioteki</source>
         <translation>Delete from library</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2270"/>
+        <location filename="../src/LibraryTab.cpp" line="859"/>
         <source>Trwale usunąć %1 plik(ów) z dysku i biblioteki? Tej operacji nie można cofnąć.</source>
         <translation>Permanently delete %1 file(s) from disk and the library? This cannot be undone.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2293"/>
+        <location filename="../src/LibraryTab.cpp" line="893"/>
         <source>Usunięto %1 plik(ów) (%2 wszystkich w bibliotece).</source>
         <translation>Deleted %1 file(s) (%2 total in library).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="316"/>
-        <source>Wyników na stronę...</source>
-        <translation>Results per page...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1454"/>
-        <source>Wyników na stronę</source>
-        <translation>Results per page</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1455"/>
-        <source>Ile wyników pobierać na stronę (na źródło):</source>
-        <translation>How many results to fetch per page (per source):</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="684"/>
+        <location filename="../src/LibraryTab.cpp" line="190"/>
         <source>Folder:</source>
         <translation>Folder:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="689"/>
-        <location filename="../src/MainWindow.cpp" line="2232"/>
+        <location filename="../src/LibraryTab.cpp" line="195"/>
+        <location filename="../src/LibraryTab.cpp" line="821"/>
         <source>Nowy folder...</source>
         <translation>New folder...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1869"/>
+        <location filename="../src/LibraryTab.cpp" line="469"/>
         <source>(wszystkie foldery)</source>
         <translation>(all folders)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="729"/>
-        <location filename="../src/MainWindow.cpp" line="1870"/>
+        <location filename="../src/LibraryTab.cpp" line="235"/>
+        <location filename="../src/LibraryTab.cpp" line="470"/>
         <source>(folder główny)</source>
         <translation>(root folder)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1964"/>
-        <location filename="../src/MainWindow.cpp" line="1969"/>
-        <location filename="../src/MainWindow.cpp" line="1976"/>
-        <location filename="../src/MainWindow.cpp" line="2235"/>
+        <location filename="../src/LibraryTab.cpp" line="564"/>
+        <location filename="../src/LibraryTab.cpp" line="569"/>
+        <location filename="../src/LibraryTab.cpp" line="576"/>
+        <location filename="../src/LibraryTab.cpp" line="824"/>
         <source>Nowy folder</source>
         <translation>New folder</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1964"/>
-        <location filename="../src/MainWindow.cpp" line="2235"/>
+        <location filename="../src/LibraryTab.cpp" line="564"/>
+        <location filename="../src/LibraryTab.cpp" line="824"/>
         <source>Nazwa folderu:</source>
         <translation>Folder name:</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1969"/>
+        <location filename="../src/LibraryTab.cpp" line="569"/>
         <source>Nazwa folderu nie może zawierać &quot;/&quot; ani &quot;\&quot;.</source>
         <translation>The folder name can&apos;t contain &quot;/&quot; or &quot;\&quot;.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2219"/>
+        <location filename="../src/LibraryTab.cpp" line="808"/>
         <source>Przenieś do... (%1)</source>
         <translation>Move to... (%1)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2220"/>
+        <location filename="../src/LibraryTab.cpp" line="809"/>
         <source>Folder główny</source>
         <translation>Root folder</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2142"/>
+        <location filename="../src/LibraryTab.cpp" line="746"/>
         <source>Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu albo błąd zapisu).</source>
         <translation>Moved %1 file(s), %2 skipped (a file with that name already exists there, or a write error).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2143"/>
+        <location filename="../src/LibraryTab.cpp" line="747"/>
         <source>Przeniesiono %1 plik(ów).</source>
         <translation>Moved %1 file(s).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="690"/>
+        <location filename="../src/LibraryTab.cpp" line="196"/>
         <source>Usuń folder...</source>
         <translation>Delete folder...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="277"/>
-        <source>Brak źródeł startowych - wybierz źródło powyżej lub w Ustawieniach.</source>
-        <translation>No startup sources - pick one above or in Settings.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="312"/>
-        <source>Źródła startowe...</source>
-        <translation>Startup sources...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="876"/>
-        <source>Witamy w B.LAIR_QT</source>
-        <translation>Welcome to B.LAIR_QT</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="876"/>
-        <source>Źródła startowe</source>
-        <translation>Startup sources</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="880"/>
-        <source>Niektóre serwisy booru domyślnie pokazują treści dla dorosłych. Wybierz źródła, które mają wczytać się zaraz po uruchomieniu - listę możesz zostawić pustą, aby zacząć od pustej karty Wyszukiwanie.</source>
-        <translation>Some booru sites show adult content by default. Pick the sources that should load right after startup - you can leave the list empty to start from a blank Search tab.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1476"/>
-        <source>Foldery, do których B.LAIR_QT ma dostęp:</source>
-        <translation>Folders B.LAIR_QT has access to:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2004"/>
-        <location filename="../src/MainWindow.cpp" line="2014"/>
-        <location filename="../src/MainWindow.cpp" line="2034"/>
+        <location filename="../src/LibraryTab.cpp" line="604"/>
+        <location filename="../src/LibraryTab.cpp" line="614"/>
+        <location filename="../src/LibraryTab.cpp" line="634"/>
         <source>Usuń folder</source>
         <translation>Delete folder</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2030"/>
+        <location filename="../src/LibraryTab.cpp" line="630"/>
         <source>Usunąć pusty folder &quot;%1&quot;?</source>
         <translation>Delete the empty folder &quot;%1&quot;?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2031"/>
+        <location filename="../src/LibraryTab.cpp" line="631"/>
         <source>Folder &quot;%1&quot; zawiera %2 plik(ów). Zostaną przeniesione do folderu głównego, a pusty folder zostanie usunięty. Kontynuować?</source>
         <translation>Folder &quot;%1&quot; contains %2 file(s). They will be moved to the root folder, then the now-empty folder will be deleted. Continue?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2077"/>
+        <location filename="../src/LibraryTab.cpp" line="680"/>
         <source>Nie udało się usunąć folderu &quot;%1&quot; - %2 plik(ów) nie dało się przenieść.</source>
         <translation>Couldn&apos;t delete folder &quot;%1&quot; - %2 file(s) couldn&apos;t be moved.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2084"/>
+        <location filename="../src/LibraryTab.cpp" line="687"/>
         <source>Nie udało się usunąć folderu &quot;%1&quot; - zostało w nim %2 ukrytych plików.</source>
         <translation>Could not remove folder &quot;%1&quot; - %2 hidden file(s) remain in it.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2087"/>
+        <location filename="../src/LibraryTab.cpp" line="690"/>
         <source>Usunięto folder &quot;%1&quot;, przeniesiono %2 plik(ów) do folderu głównego.</source>
         <translation>Deleted folder &quot;%1&quot;, moved %2 file(s) to the root folder.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2090"/>
+        <location filename="../src/LibraryTab.cpp" line="693"/>
         <source>Usunięto pusty folder &quot;%1&quot;.</source>
         <translation>Deleted the empty folder &quot;%1&quot;.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="686"/>
+        <location filename="../src/LibraryTab.cpp" line="192"/>
         <source>Widok drzewa</source>
         <translation>Tree view</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="688"/>
+        <location filename="../src/LibraryTab.cpp" line="194"/>
         <source>z podfolderami</source>
         <translation>with subfolders</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2015"/>
+        <location filename="../src/LibraryTab.cpp" line="615"/>
         <source>Folder &quot;%1&quot; zawiera podfoldery (%2) - usuń je najpierw.</source>
         <translation>Folder &quot;%1&quot; contains subfolders (%2) - delete them first.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="324"/>
-        <source>Dostęp do folderów...</source>
-        <translation>Folder access...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="318"/>
-        <source>Czarna lista tagów...</source>
-        <translation>Tag blacklist...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="330"/>
-        <source>Otwórz plik motywu (JSON)...</source>
-        <translation>Open theme file (JSON)...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="332"/>
-        <source>Przeładuj motyw</source>
-        <translation>Reload theme</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="328"/>
-        <source>Wybierz gotowy motyw...</source>
-        <translation>Pick curated theme...</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="327"/>
-        <source>Wygląd</source>
-        <translation>Appearance</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="582"/>
-        <source>Zmiana języka wymaga ponownego uruchomienia aplikacji. Uruchomić ponownie teraz?</source>
-        <translation>Changing the language requires restarting the application. Restart now?</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1138"/>
-        <location filename="../src/MainWindow.cpp" line="1856"/>
+        <location filename="../src/LibraryTab.cpp" line="456"/>
         <source>- ukryto %1 przez czarną listę</source>
         <translation>- %1 hidden by the blacklist</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1151"/>
-        <source>Czarna lista ukryła %1 kolejnych stron - przewiń, aby szukać dalej.</source>
-        <translation>The blacklist hid %1 pages in a row - scroll to keep searching.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1321"/>
-        <source>Strony są nieaktywne, dopóki działa infinite scroll lub autoscroll.</source>
-        <translation>Page controls are disabled while infinite scroll or autoscroll is on.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1368"/>
+        <location filename="../src/LibraryTab.cpp" line="287"/>
         <source>Jeden z folderów zawiera się w drugim, więc pliki nie zostaną przeniesione. Folder pobierania zostanie zmieniony, a dotychczasowe pliki zostaną na miejscu.</source>
         <translation>One folder contains the other, so the files will not be moved. The download folder will be changed and the existing files stay where they are.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1375"/>
+        <location filename="../src/LibraryTab.cpp" line="294"/>
         <source>W starym folderze jest %1 plik(ów) z biblioteki. Przenieść je razem z podfolderami i tagami do nowego folderu?
 
 Nie - pliki zostaną w starym miejscu i będą widoczne tylko w &quot;(wszystkie foldery)&quot;.</source>
@@ -821,131 +523,458 @@ Nie - pliki zostaną w starym miejscu i będą widoczne tylko w &quot;(wszystkie
 No - the files stay where they are and are only visible under &quot;(all folders)&quot;.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1406"/>
+        <location filename="../src/LibraryTab.cpp" line="325"/>
         <source>Przenoszenie biblioteki...</source>
         <translation>Moving library...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1406"/>
+        <location filename="../src/LibraryTab.cpp" line="325"/>
         <source>Anuluj</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1434"/>
+        <location filename="../src/LibraryTab.cpp" line="364"/>
         <source>Przeniesiono %1 plik(ów) do %2.</source>
         <translation>Moved %1 file(s) to %2.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1435"/>
+        <location filename="../src/LibraryTab.cpp" line="365"/>
         <source>Przeniesiono %1 plik(ów) do %2, %3 pominiętych (plik już istnieje, brak pliku lub błąd zapisu).</source>
         <translation>Moved %1 file(s) to %2, %3 skipped (file already exists, missing file or write error).</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1472"/>
+        <location filename="../src/LibraryTab.cpp" line="576"/>
+        <location filename="../src/LibraryTab.cpp" line="604"/>
+        <location filename="../src/LibraryTab.cpp" line="706"/>
+        <source>Ta lokalizacja jest poza dozwolonym zakresem dostępu.</source>
+        <translation>This location is outside the allowed access scope.</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="134"/>
+        <location filename="../src/MainWindow.cpp" line="153"/>
+        <source>Biblioteka</source>
+        <translation>Library</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="80"/>
+        <source>Błąd pobierania: %1</source>
+        <translation>Download error: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="135"/>
+        <source>Folder pobierania...</source>
+        <translation>Download folder...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="209"/>
+        <location filename="../src/MainWindow.cpp" line="243"/>
+        <source>Język</source>
+        <translation>Language</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="76"/>
+        <source>Już pobrano: %1</source>
+        <translation>Already downloaded: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="160"/>
+        <source>Log sieciowy</source>
+        <translation>Network log</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="169"/>
+        <source>Szczegóły</source>
+        <translation>Details</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="125"/>
+        <source>Ustawienia</source>
+        <translation>Settings</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="127"/>
+        <location filename="../src/MainWindow.cpp" line="151"/>
+        <source>Wyszukiwanie</source>
+        <translation>Search</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="78"/>
+        <source>Zapisano: %1</source>
+        <translation>Saved: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="129"/>
+        <source>Przywróć domyślne źródła</source>
+        <translation>Restore default sources</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="130"/>
+        <source>Wyników na stronę...</source>
+        <translation>Results per page...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="128"/>
+        <source>Źródła startowe...</source>
+        <translation>Startup sources...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="269"/>
+        <source>Foldery, do których B.LAIR_QT ma dostęp:</source>
+        <translation>Folders B.LAIR_QT has access to:</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="136"/>
+        <source>Dostęp do folderów...</source>
+        <translation>Folder access...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="131"/>
+        <source>Czarna lista tagów...</source>
+        <translation>Tag blacklist...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="142"/>
+        <source>Otwórz plik motywu (JSON)...</source>
+        <translation>Open theme file (JSON)...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="144"/>
+        <source>Przeładuj motyw</source>
+        <translation>Reload theme</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="140"/>
+        <source>Wybierz gotowy motyw...</source>
+        <translation>Pick curated theme...</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="139"/>
+        <source>Wygląd</source>
+        <translation>Appearance</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="244"/>
+        <source>Zmiana języka wymaga ponownego uruchomienia aplikacji. Uruchomić ponownie teraz?</source>
+        <translation>Changing the language requires restarting the application. Restart now?</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="265"/>
         <source>Dostęp do folderów</source>
         <translation>Folder access</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1482"/>
+        <location filename="../src/MainWindow.cpp" line="275"/>
         <source>%1 (dane aplikacji)</source>
         <translation>%1 (app data)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1484"/>
+        <location filename="../src/MainWindow.cpp" line="277"/>
         <source>%1 (folder pobierania)</source>
         <translation>%1 (download folder)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1499"/>
+        <location filename="../src/MainWindow.cpp" line="292"/>
         <source>Dodaj folder...</source>
         <translation>Add folder...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1500"/>
+        <location filename="../src/MainWindow.cpp" line="293"/>
         <source>Usuń zaznaczony</source>
         <translation>Remove selected</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1512"/>
+        <location filename="../src/MainWindow.cpp" line="305"/>
         <source>Wybierz folder</source>
         <translation>Choose folder</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1548"/>
+        <location filename="../src/MainWindow.cpp" line="341"/>
         <source>Czarna lista tagów</source>
         <translation>Tag blacklist</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1552"/>
+        <location filename="../src/MainWindow.cpp" line="345"/>
         <source>Jeden tag w linii. Posty z tymi tagami nie trafią do wyników. Gdy serwis to obsługuje, tagi są wykluczane już w zapytaniu, a w pozostałych wypadkach wyniki są filtrowane po pobraniu. Dopasowanie jest dokładne, więc &quot;solo&quot; nie ukryje &quot;solo_focus&quot;.</source>
         <translation>One tag per line. Posts with these tags never reach the results. Where the site supports it the tags are excluded in the query itself, otherwise the results are filtered after download. Matching is exact, so &quot;solo&quot; will not hide &quot;solo_focus&quot;.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1569"/>
+        <location filename="../src/MainWindow.cpp" line="362"/>
         <source>(wszystkie źródła)</source>
         <translation>(all sources)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1582"/>
+        <location filename="../src/MainWindow.cpp" line="375"/>
         <source>Stosuj też w Bibliotece (ukrywa pobrane pliki)</source>
         <translation>Apply in the Library too (hides downloaded files)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1636"/>
+        <location filename="../src/MainWindow.cpp" line="429"/>
         <source>Motyw przeładowany.</source>
         <translation>Theme reloaded.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1654"/>
+        <location filename="../src/MainWindow.cpp" line="445"/>
         <source>Wybierz gotowy motyw</source>
         <translation>Pick curated theme</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1663"/>
+        <location filename="../src/MainWindow.cpp" line="454"/>
         <source>Motyw domyślny (systemowy)</source>
         <translation>Default theme (system)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1695"/>
+        <location filename="../src/MainWindow.cpp" line="486"/>
         <source>Zastosowano motyw: %1</source>
         <translation>Applied theme: %1</translation>
     </message>
+</context>
+<context>
+    <name>SearchTab</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1720"/>
+        <location filename="../src/SearchTab.cpp" line="693"/>
+        <source>%1: %2 wyników w widoku (strona %3, +%4)</source>
+        <translation>%1: %2 results shown (page %3, +%4)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="333"/>
+        <source>Autoscroll</source>
+        <translation>Autoscroll</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="735"/>
+        <source>Błąd (%1): %2</source>
+        <translation>Error (%1): %2</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="354"/>
+        <source>+ Dodaj własne booru...</source>
+        <translation>+ Add custom booru...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="313"/>
+        <source>Infinite scroll</source>
+        <translation>Infinite scroll</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="839"/>
+        <source>Koniec galerii - autoscroll zatrzymany.</source>
+        <translation>End of gallery - autoscroll stopped.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="927"/>
+        <source>Kopiuj obraz do schowka</source>
+        <translation>Copy image to clipboard</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="312"/>
+        <source>Nast. ▶</source>
+        <translation>Next ▶</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="952"/>
+        <source>Otwórz stronę posta w przeglądarce</source>
+        <translation>Open post page in browser</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="886"/>
+        <source>Pobieranie %1 plik(ów) do %2...</source>
+        <translation>Downloading %1 file(s) to %2...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="315"/>
+        <location filename="../src/SearchTab.cpp" line="876"/>
+        <source>Pobierz zaznaczone</source>
+        <translation>Download selected</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="875"/>
+        <location filename="../src/SearchTab.cpp" line="919"/>
+        <source>Pobierz zaznaczone (%1)</source>
+        <translation>Download selected (%1)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="308"/>
+        <source>◀ Poprz.</source>
+        <translation>◀ Prev</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="733"/>
+        <source>przekroczono limit czasu (%1s) - sprawdź URL/połączenie</source>
+        <translation>timed out (%1s) - check the URL/connection</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="302"/>
+        <source>Rozmiar miniatur:</source>
+        <translation>Thumbnail size:</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="321"/>
+        <source>Strona:</source>
+        <translation>Page:</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="287"/>
+        <source>Szukaj</source>
+        <translation>Search</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="334"/>
+        <source>Szybkość:</source>
+        <translation>Speed:</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="286"/>
+        <source>tag1 tag2 tag3...</source>
+        <translation>tag1 tag2 tag3...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="314"/>
+        <source>Wczytaj więcej</source>
+        <translation>Load more</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="618"/>
+        <source>Wyszukiwanie w %1 (strona %2)...</source>
+        <translation>Searching %1 (page %2)...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="281"/>
+        <location filename="../src/SearchTab.cpp" line="369"/>
+        <source>Wybierz kilka źródeł...</source>
+        <translation>Select multiple sources...</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="282"/>
+        <source>Przeszukaj kilka booru naraz - wyniki lądują we wspólnej galerii</source>
+        <translation>Search several boorus at once - results land in one shared gallery</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="283"/>
+        <source>Usuń</source>
+        <translation>Remove</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="284"/>
+        <source>Usuń bieżące źródło z listy</source>
+        <translation>Remove the current source from the list</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="617"/>
+        <source>%1 źródłach</source>
+        <translation>%1 sources</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="381"/>
+        <source>%1 źródeł zaznaczonych (zmień...)</source>
+        <translation>%1 sources selected (change...)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="418"/>
+        <source>Wybierz źródła do przeszukania</source>
+        <translation>Select sources to search</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="512"/>
+        <source>Usuń źródło</source>
+        <translation>Remove source</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="513"/>
+        <source>Na pewno usunąć &quot;%1&quot; z listy źródeł?</source>
+        <translation>Remove &quot;%1&quot; from the source list?</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="589"/>
+        <source>Nie wybrano żadnego źródła.</source>
+        <translation>No source selected.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="533"/>
+        <source>Przywrócono domyślną listę źródeł.</source>
+        <translation>Default source list restored.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="692"/>
+        <source>%1 źródeł</source>
+        <translation>%1 sources</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="893"/>
+        <source>Wyników na stronę</source>
+        <translation>Results per page</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="894"/>
+        <source>Ile wyników pobierać na stronę (na źródło):</source>
+        <translation>How many results to fetch per page (per source):</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="136"/>
+        <source>Brak źródeł startowych - wybierz źródło powyżej lub w Ustawieniach.</source>
+        <translation>No startup sources - pick one above or in Settings.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="462"/>
+        <source>Witamy w B.LAIR_QT</source>
+        <translation>Welcome to B.LAIR_QT</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="462"/>
+        <source>Źródła startowe</source>
+        <translation>Startup sources</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="466"/>
+        <source>Niektóre serwisy booru domyślnie pokazują treści dla dorosłych. Wybierz źródła, które mają wczytać się zaraz po uruchomieniu - listę możesz zostawić pustą, aby zacząć od pustej karty Wyszukiwanie.</source>
+        <translation>Some booru sites show adult content by default. Pick the sources that should load right after startup - you can leave the list empty to start from a blank Search tab.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="696"/>
+        <source>- ukryto %1 przez czarną listę</source>
+        <translation>- %1 hidden by the blacklist</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="709"/>
+        <source>Czarna lista ukryła %1 kolejnych stron - przewiń, aby szukać dalej.</source>
+        <translation>The blacklist hid %1 pages in a row - scroll to keep searching.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="864"/>
+        <source>Strony są nieaktywne, dopóki działa infinite scroll lub autoscroll.</source>
+        <translation>Page controls are disabled while infinite scroll or autoscroll is on.</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="929"/>
         <source>Kopiowanie obrazu do schowka...</source>
         <translation>Copying image to clipboard...</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1728"/>
+        <location filename="../src/SearchTab.cpp" line="937"/>
         <source>Nie udało się skopiować obrazu: %1</source>
         <translation>Failed to copy image: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1733"/>
+        <location filename="../src/SearchTab.cpp" line="942"/>
         <source>Nie udało się zdekodować obrazu.</source>
         <translation>Failed to decode the image.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1737"/>
+        <location filename="../src/SearchTab.cpp" line="946"/>
         <source>Skopiowano obraz do schowka.</source>
         <translation>Image copied to clipboard.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1752"/>
+        <location filename="../src/SearchTab.cpp" line="961"/>
         <source>Dodaj tag do czarnej listy</source>
         <translation>Add tag to blacklist</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1757"/>
+        <location filename="../src/SearchTab.cpp" line="966"/>
         <source>Dodano &quot;%1&quot; do czarnej listy.</source>
         <translation>Added &quot;%1&quot; to the blacklist.</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1976"/>
-        <location filename="../src/MainWindow.cpp" line="2004"/>
-        <location filename="../src/MainWindow.cpp" line="2103"/>
-        <source>Ta lokalizacja jest poza dozwolonym zakresem dostępu.</source>
-        <translation>This location is outside the allowed access scope.</translation>
     </message>
 </context>
 </TS>

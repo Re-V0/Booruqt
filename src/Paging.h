@@ -7,6 +7,11 @@
 
 #pragma once
 
+// How many pages infinite scroll may pull by itself when the previous ones
+// added nothing visible, before it gives up and waits for the user. The
+// library reads at most this many batches the blacklist empties completely.
+constexpr int kMaxAutoLoadChain = 5;
+
 // Infinite scroll is driven by scrollbar movement, so a round that adds
 // nothing (a fully blacklisted page) or that does not fill the viewport
 // produces no further scroll events and loading would stop silently.

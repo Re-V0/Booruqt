@@ -7,8 +7,11 @@
 
 #include "TagLineEdit.h"
 
-#include <QPainter>
+#include <QAbstractItemView>
+#include <QCompleter>
 #include <QKeyEvent>
+#include <QPainter>
+#include <QStringListModel>
 
 TagLineEdit::TagLineEdit(QWidget *parent) : QLineEdit(parent)
 {
@@ -109,4 +112,22 @@ void TagLineEdit::focusOutEvent(QFocusEvent *event)
     if (event->reason() != Qt::PopupFocusReason)
         clearSuggestion();
     QLineEdit::focusOutEvent(event);
+}
+
+void showTagSuggestions(QCompleter *completer, const QStringList &tags, const QString &prefix)
+{
+    auto *edit = qobject_cast<TagLineEdit *>(completer->widget());
+    if (tags.isEmpty()) {
+        if (edit)
+            edit->clearSuggestion();
+        completer->popup()->hide();
+        return;
+    }
+
+    // Inline ghost text for the best match, popup list for the rest.
+    if (edit)
+        edit->setSuggestion(tags.first());
+    qobject_cast<QStringListModel *>(completer->model())->setStringList(tags);
+    completer->setCompletionPrefix(prefix);
+    completer->complete();
 }

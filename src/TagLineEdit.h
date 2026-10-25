@@ -8,6 +8,9 @@
 #pragma once
 
 #include <QLineEdit>
+#include <QStringList>
+
+class QCompleter;
 
 // Tag input with a fish-style inline suggestion: the rest of the best match
 // is drawn greyed out after the cursor and accepted with Right or End.
@@ -36,3 +39,7 @@ protected:
 private:
     QString m_suffix;
 };
+
+// Shows tags in the completer's popup and the first one as the inline
+// suggestion of the completer's TagLineEdit. No tags hides both.
+void showTagSuggestions(QCompleter *completer, const QStringList &tags, const QString &prefix);
