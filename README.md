@@ -34,7 +34,7 @@ Prebuilt packages are attached to each
 one for your system, then (with the version you downloaded):
 
 ```bash
-sudo pacman -U blairqt-<version>-1-x86_64.pkg.tar.zst      # Arch
+sudo pacman -U blairqt-<version>-1-x86_64.pkg.tar.zst       # Arch
 sudo apt install ./blairqt_<version>-debian13_amd64.deb     # Debian 13
 sudo apt install ./blairqt_<version>-ubuntu26.04_amd64.deb  # Ubuntu 26.04 (or -ubuntu24.04)
 sudo pkg add blairqt-<version>-freebsd15-amd64.pkg          # FreeBSD 15 (or -freebsd14)
@@ -71,13 +71,14 @@ Gentoo — drop the ebuild into a local overlay:
 
 ```bash
 mkdir -p /var/db/repos/local/media-gfx/blairqt
-cp blairqt-0.3.1.ebuild /var/db/repos/local/media-gfx/blairqt/
-ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-0.3.1.ebuild manifest
+cp blairqt-1.0.0.ebuild /var/db/repos/local/media-gfx/blairqt/
+ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-1.0.0.ebuild manifest
 emerge -av media-gfx/blairqt
 ```
 
-`blairqt-9999.ebuild` builds from git master instead. `USE=python` pulls an
-interpreter for script plugins; `USE=test` runs the suite during the merge.
+`blairqt-9999.ebuild` builds the `main` branch instead. `USE=python` pulls
+an interpreter for script plugins; `USE=test` runs the suite during the
+merge.
 
 Anything else — needs Qt 6 (Widgets, Network, Concurrent, Sql,
 LinguistTools), CMake 3.21+ and a C++20 compiler:

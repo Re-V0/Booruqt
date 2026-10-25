@@ -1,6 +1,6 @@
 # Maintainer: re-v0
 pkgname=blairqt
-pkgver=0.3.1
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="Native Qt6 booru gallery client - browse, download and locally index booru-style image boards"
 arch=('x86_64')
