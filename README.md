@@ -266,5 +266,6 @@ is an independent project and is neither affiliated with nor endorsed by The
 Qt Company. It links the Qt 6 libraries dynamically under the LGPL-3.0. The
 Linux and FreeBSD packages use the Qt your system provides. The Windows zip and
 the macOS app carry unmodified Qt libraries next to the program; replacing
-them with your own build of the same Qt version is allowed. The Qt source code
-is available from [download.qt.io](https://download.qt.io/official_releases/qt/).
+them with your own build of the same Qt version is allowed. Both carry the
+license texts (MPL-2.0, LGPL-3.0, GPL-3.0) in a `licenses` folder, with a
+`NOTICE.txt` naming the Qt version and where its source code is.

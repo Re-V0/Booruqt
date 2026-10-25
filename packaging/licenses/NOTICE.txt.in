@@ -1,0 +1,51 @@
+Licenses in this package
+========================
+
+This file and the other texts in this folder come with the Windows zip
+and the macOS app, which carry their own copy of Qt. The Linux and
+FreeBSD packages use the Qt of the system instead.
+
+
+B.LAIR_QT
+---------
+
+B.LAIR_QT @PROJECT_VERSION@. Copyright (c) 2026 re-v0.
+Licensed under the Mozilla Public License 2.0: MPL-2.0.txt.
+Source code: https://gitlab.com/re-v0/blairqt
+
+
+Qt
+--
+
+The Qt libraries and plugins in this package are unmodified builds of
+Qt @BLAIRQT_QT_VERSION@ by The Qt Company, used under the GNU Lesser General Public
+License version 3: LGPL-3.0.txt, which builds on the GNU General Public
+License version 3: GPL-3.0.txt.
+
+B.LAIR_QT links Qt dynamically. You may replace the Qt libraries in
+this package with your own build of Qt @BLAIRQT_QT_VERSION@, modified or not:
+put your libraries in place of these (on Windows the Qt6*.dll files and
+the plugin folders next to blairqt.exe; on macOS the frameworks and
+plugins inside blairqt.app/Contents). On macOS, sign the app again
+afterwards, or it will not start:
+    codesign --force --deep --sign - blairqt.app
+
+The complete source code of Qt @BLAIRQT_QT_VERSION@:
+https://download.qt.io/archive/qt/@BLAIRQT_QT_MAJOR@.@BLAIRQT_QT_MINOR@/@BLAIRQT_QT_VERSION@/single/
+
+Qt contains third-party components under their own licenses, listed in
+"Third-Party Code Used in Qt" in the Qt documentation:
+https://doc.qt.io/qt-@BLAIRQT_QT_MAJOR@.@BLAIRQT_QT_MINOR@/licenses-used-in-qt.html
+
+Qt is a registered trademark of The Qt Company Ltd. B.LAIR_QT is an
+independent project, neither affiliated with nor endorsed by The Qt
+Company.
+
+
+Microsoft Visual C++ runtime (Windows zip only)
+-----------------------------------------------
+
+vc_redist.x64.exe is Microsoft's installer for the Visual C++ runtime,
+included unmodified as Microsoft permits for programs built with
+Visual Studio. It is covered by Microsoft's own license terms, which
+the installer shows before it installs anything.

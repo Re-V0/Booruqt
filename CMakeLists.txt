@@ -111,6 +111,23 @@ else()
     target_compile_definitions(blairqt PRIVATE BLAIRQT_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/blairqt")
 endif()
 
+# The Windows zip and the macOS app carry their own Qt, so they also carry
+# the license texts: this program's (MPL-2.0), Qt's (LGPL-3.0, which builds
+# on GPL-3.0) and a notice naming the Qt version and where its source is.
+# The Linux and FreeBSD packages use the system's Qt and install none.
+if(WIN32 OR APPLE)
+    set(BLAIRQT_QT_VERSION "${Qt6_VERSION}")
+    set(BLAIRQT_QT_MAJOR "${Qt6_VERSION_MAJOR}")
+    set(BLAIRQT_QT_MINOR "${Qt6_VERSION_MINOR}")
+    configure_file(packaging/licenses/NOTICE.txt.in "${CMAKE_CURRENT_BINARY_DIR}/licenses/NOTICE.txt" @ONLY)
+    install(FILES LICENSE DESTINATION ${BLAIRQT_INSTALL_DATA_DIR}/licenses RENAME MPL-2.0.txt)
+    install(FILES
+        packaging/licenses/LGPL-3.0.txt
+        packaging/licenses/GPL-3.0.txt
+        "${CMAKE_CURRENT_BINARY_DIR}/licenses/NOTICE.txt"
+        DESTINATION ${BLAIRQT_INSTALL_DATA_DIR}/licenses)
+endif()
+
 if(MSVC)
     # The sources are UTF-8 (the Polish tr() strings). Without /utf-8 MSVC
     # reads them in the local code page, the strings arrive garbled, and no

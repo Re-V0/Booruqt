@@ -37,4 +37,12 @@ Microsoft that this folder cannot carry by itself: the Visual C++ runtime.
    use a different one.
 
 
+4. Licenses
+
+   B.LAIR_QT is free software under the Mozilla Public License 2.0. The
+   Qt libraries in this folder are used under the GNU LGPL 3.0. The texts
+   are in the licenses folder; licenses\NOTICE.txt says what each one
+   covers and where the source code of Qt is.
+
+
 Source code and issues: https://gitlab.com/re-v0/blairqt
