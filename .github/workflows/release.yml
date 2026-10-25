@@ -1,12 +1,10 @@
-# Builds distro packages for a release tag and attaches them to a GitHub
-# release.
+# Publishes a release: for a v* tag, builds every package (build.yml) and
+# attaches them to a GitHub release.
 #
 # GitHub is a push mirror of GitLab (canonical). Pushing a tag to GitLab
 # lets the mirror bring it here, and that push starts this workflow. If it
 # does not start (mirror not pushing tags, Actions disabled), run it by hand:
 # Actions -> "Release packages" -> Run workflow, with the existing tag name.
-#
-# Each build job runs the test suite first, so a broken tag publishes nothing.
 
 name: Release packages
 
@@ -16,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to build, for example v0.3.1'
+        description: 'Existing tag to build, for example v0.3.2'
         required: true
 
 permissions:
@@ -26,92 +24,32 @@ env:
   TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
-  arch:
-    name: Arch Linux
+  # A tag whose files still carry the previous version would publish
+  # packages named and versioned wrongly; stop before building anything.
+  check:
+    name: Version matches the tag
     runs-on: ubuntu-latest
-    container: archlinux:latest
     steps:
-      - name: Install build tools
-        run: pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-tools python
-
       - uses: actions/checkout@v6
         with:
           ref: ${{ env.TAG }}
 
-      - name: Check that PKGBUILD matches the tag
-        run: grep -qx "pkgver=${TAG#v}" PKGBUILD
-
-      # makepkg refuses to run as root. The PKGBUILD fetches the same tag
-      # from GitLab, so this also tests the PKGBUILD exactly as users get it.
-      - name: Build, test, package
+      - name: Compare version numbers
         run: |
-          useradd -m builder
-          chown -R builder: .
-          sudo -u builder makepkg --noconfirm
-
-      # The name filter skips the blairqt-debug package makepkg also builds.
-      - uses: actions/upload-artifact@v7
-        with:
-          name: arch
-          path: blairqt-[0-9]*-x86_64.pkg.tar.zst
-          if-no-files-found: error
-
-  deb:
-    name: ${{ matrix.label }}
-    runs-on: ubuntu-latest
-    # One .deb per release: each ships a different Qt, and dpkg-shlibdeps
-    # writes the Qt version found at build time as the minimum. A package
-    # built on Debian 13 (Qt 6.8) would refuse to install on Ubuntu 24.04
-    # (Qt 6.4).
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: Debian 13
-            image: debian:13
-            suffix: debian13
-          - label: Ubuntu 24.04
-            image: ubuntu:24.04
-            suffix: ubuntu24.04
-          - label: Ubuntu 26.04
-            image: ubuntu:26.04
-            suffix: ubuntu26.04
-    container: ${{ matrix.image }}
-    steps:
-      - name: Install build tools
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates git cmake ninja-build g++ dpkg-dev file python3 \
-            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
-            libqt6sql6-sqlite libgl-dev
-
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ env.TAG }}
-
-      - name: Build and test
-        run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-          cmake --build build
-          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
-
-      - name: Package
-        run: |
-          cd build
-          cpack -G DEB
           version="${TAG#v}"
-          mv "blairqt_${version}_amd64.deb" "../blairqt_${version}-${{ matrix.suffix }}_amd64.deb"
+          grep -q "^project(blairqt VERSION ${version} " CMakeLists.txt || { echo "CMakeLists.txt is not at ${version}"; exit 1; }
+          grep -qx "pkgver=${version}" PKGBUILD || { echo "PKGBUILD is not at ${version}"; exit 1; }
+          test -f "blairqt-${version}.ebuild" || { echo "blairqt-${version}.ebuild missing"; exit 1; }
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: deb-${{ matrix.suffix }}
-          path: blairqt_*_amd64.deb
-          if-no-files-found: error
+  build:
+    needs: check
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
   release:
     name: Publish release
-    needs: [arch, deb]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write

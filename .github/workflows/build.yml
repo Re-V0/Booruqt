@@ -1,0 +1,270 @@
+# Builds, tests and packages B.LAIR_QT on every supported system.
+#
+# Runs on every push to main (as a check: nothing is published) and is
+# called by release.yml for a tag, which then attaches the packages to the
+# GitHub release. GitHub is a push mirror of GitLab, so a push to GitLab's
+# main reaches this workflow through the mirror.
+#
+# Every job runs the test suite before packaging, so a package exists only
+# for a build whose tests passed.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit or tag to build'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  # A tag when called by release.yml, otherwise the pushed commit.
+  REF: ${{ inputs.ref || github.sha }}
+  QT_VERSION: '6.8.3'
+
+jobs:
+  arch:
+    name: Arch Linux
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build tools
+        run: pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-tools python
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+          path: repo
+
+      # The PKGBUILD in the repo builds a release tag from GitLab. Here it
+      # builds this exact checkout instead, so a push to main is tested before
+      # any tag for its version exists. makepkg refuses to run as root.
+      - name: Build, test, package
+        run: |
+          commit=$(git -C repo rev-parse HEAD)
+          mkdir pkgbuild
+          sed "s|^source=.*|source=(\"blairqt::git+file://$GITHUB_WORKSPACE/repo#commit=$commit\")|" \
+            repo/PKGBUILD > pkgbuild/PKGBUILD
+          grep -q "#commit=$commit" pkgbuild/PKGBUILD
+          useradd -m builder
+          chown -R builder: .
+          cd pkgbuild
+          sudo -u builder makepkg --noconfirm
+
+      # The name filter skips the blairqt-debug package makepkg also builds.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch
+          path: pkgbuild/blairqt-[0-9]*-x86_64.pkg.tar.zst
+          if-no-files-found: error
+
+  deb:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    # One .deb per release: each ships a different Qt, and dpkg-shlibdeps
+    # writes the Qt version found at build time as the minimum. A package
+    # built on Debian 13 (Qt 6.8) would refuse to install on Ubuntu 24.04
+    # (Qt 6.4).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Debian 13
+            image: debian:13
+            suffix: debian13
+          - label: Ubuntu 24.04
+            image: ubuntu:24.04
+            suffix: ubuntu24.04
+          - label: Ubuntu 26.04
+            image: ubuntu:26.04
+            suffix: ubuntu26.04
+    container: ${{ matrix.image }}
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git cmake ninja-build g++ dpkg-dev file python3 \
+            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
+            libqt6sql6-sqlite libgl-dev
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and test
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+
+      - name: Package
+        run: |
+          version=$(sed -n 's/^project(blairqt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          cd build
+          cpack -G DEB
+          mv "blairqt_${version}_amd64.deb" "../blairqt_${version}-${{ matrix.suffix }}_amd64.deb"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb-${{ matrix.suffix }}
+          path: blairqt_*_amd64.deb
+          if-no-files-found: error
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+
+      # cl.exe and the Windows SDK on PATH, for Ninja.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build and test
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          cmake --build build
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          ctest --test-dir build --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # Portable layout: blairqt.exe, translations\, plugin_runner.py and
+      # tools\ side by side, plus the Qt DLLs (windeployqt) and the MSVC
+      # runtime, so nothing has to be installed first.
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path CMakeLists.txt -Pattern 'project\(blairqt VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          $dist = "dist\blairqt-$version-windows-x64"
+          cmake --install build --prefix $dist
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$dist\blairqt.exe"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Copy-Item "$env:VCToolsRedistDir\x64\Microsoft.VC143.CRT\*.dll" $dist
+          if (-not (Test-Path "$dist\sqldrivers\qsqlite.dll")) { throw "SQLite driver missing from the package" }
+          Compress-Archive -Path $dist -DestinationPath "blairqt-$version-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: blairqt-*-windows-x64.zip
+          if-no-files-found: error
+
+  macos:
+    name: macOS
+    # Apple Silicon runner; the package is arm64 only.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          cache: true
+
+      - name: Install tools
+        run: brew install ninja librsvg
+
+      - name: Build and test
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build
+          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+
+      - name: Package
+        run: |
+          version=$(sed -n 's/^project(blairqt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          cmake --install build --prefix dist
+          app=dist/blairqt.app
+
+          # Icon: the SVG rendered at every size macOS asks for.
+          mkdir blairqt.iconset
+          for size in 16 32 128 256 512; do
+            rsvg-convert -w "$size" -h "$size" resources/blairqt.svg -o "blairqt.iconset/icon_${size}x${size}.png"
+            double=$((size * 2))
+            rsvg-convert -w "$double" -h "$double" resources/blairqt.svg -o "blairqt.iconset/icon_${size}x${size}@2x.png"
+          done
+          iconutil -c icns blairqt.iconset -o "$app/Contents/Resources/blairqt.icns"
+
+          macdeployqt "$app"
+          # Apple Silicon runs nothing unsigned. macdeployqt rewrites the
+          # binaries, so the whole bundle is signed again, ad hoc (no Apple
+          # Developer identity: users confirm the first start in System
+          # Settings -> Privacy & Security).
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          test -f "$app/Contents/PlugIns/sqldrivers/libqsqlite.dylib"
+
+          hdiutil create -volname "B.LAIR_QT" -srcfolder "$app" -ov -format UDZO "blairqt-${version}-macos-arm64.dmg"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: blairqt-*-macos-arm64.dmg
+          if-no-files-found: error
+
+  freebsd:
+    name: FreeBSD ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    # A package records the FreeBSD major version it was built on, and pkg
+    # refuses one built for another major version.
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ['14', '15']
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build, test, package in a FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ matrix.release }}
+          sync: rsync
+          copyback: true
+          prepare: |
+            pkg install -y cmake ninja qt6-base qt6-tools qt6-base_sqldriver-sqlite python3
+          run: |
+            set -e
+            version=$(sed -n 's/^project(blairqt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+            major=$(freebsd-version -u | cut -d. -f1)
+            cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+            cmake --build build
+            QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+            DESTDIR="$PWD/stage" cmake --install build
+            sh packaging/freebsd/make-pkg.sh "$version" "$PWD/stage" "$PWD/pkgout"
+            mv "pkgout/blairqt-${version}.pkg" "blairqt-${version}-freebsd${major}-amd64.pkg"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: freebsd-${{ matrix.release }}
+          path: blairqt-*-freebsd*-amd64.pkg
+          if-no-files-found: error
