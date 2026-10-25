@@ -29,17 +29,24 @@ sandbox plugins.
 
 ## Quickstart
 
-Prebuilt packages for Arch Linux, Debian 13 and Ubuntu 24.04 are attached to
-each [release on GitHub](https://github.com/Re-V0/Booruqt/releases):
+Prebuilt packages for Arch Linux, Debian 13, Ubuntu 24.04 and Ubuntu 26.04
+are attached to each [release on GitHub](https://github.com/Re-V0/Booruqt/releases).
+Download the one for your system, then (with the version you downloaded):
 
 ```bash
-sudo pacman -U blairqt-0.3.1-1-x86_64.pkg.tar.zst      # Arch
-sudo apt install ./blairqt_0.3.1-debian13_amd64.deb     # Debian 13 (or -ubuntu24.04)
+sudo pacman -U blairqt-<version>-1-x86_64.pkg.tar.zst      # Arch
+sudo apt install ./blairqt_<version>-debian13_amd64.deb     # Debian 13
+sudo apt install ./blairqt_<version>-ubuntu26.04_amd64.deb  # Ubuntu 26.04 (or -ubuntu24.04)
 ```
 
-Arch Linux, from source:
+Arch Linux, from source. Build outside the source tree: makepkg keeps its
+sources in `./src`, the same name as this project's source folder, and
+`makepkg -c` would delete it.
 
 ```bash
+mkdir -p ~/build/blairqt
+cp PKGBUILD ~/build/blairqt/
+cd ~/build/blairqt
 makepkg -si
 ```
 

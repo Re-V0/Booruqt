@@ -59,8 +59,10 @@ jobs:
   deb:
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
-    # Debian 13 and Ubuntu 24.04 name the Qt libraries differently
-    # (libqt6core6t64 vs ...), so one .deb cannot serve both.
+    # One .deb per release: each ships a different Qt, and dpkg-shlibdeps
+    # writes the Qt version found at build time as the minimum. A package
+    # built on Debian 13 (Qt 6.8) would refuse to install on Ubuntu 24.04
+    # (Qt 6.4).
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +73,9 @@ jobs:
           - label: Ubuntu 24.04
             image: ubuntu:24.04
             suffix: ubuntu24.04
+          - label: Ubuntu 26.04
+            image: ubuntu:26.04
+            suffix: ubuntu26.04
     container: ${{ matrix.image }}
     steps:
       - name: Install build tools

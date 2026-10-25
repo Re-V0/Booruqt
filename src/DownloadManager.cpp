@@ -19,6 +19,7 @@
 #include <QFileInfo>
 #include <QUrl>
 #include <QRegularExpression>
+#include <QSaveFile>
 
 DownloadManager::DownloadManager(LibraryDatabase *library, QObject *parent)
     : QObject(parent), m_manager(new QNetworkAccessManager(this)), m_library(library)
@@ -44,8 +45,12 @@ QString DownloadManager::targetFilePath(const Post &post) const
     if (ext.isEmpty() || ext.size() > 5)
         ext = QStringLiteral("jpg");
 
-    const QString safeSource = QString(post.sourceName).replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9_.-]")), QStringLiteral("_"));
-    const QString fileName = QStringLiteral("%1_%2.%3").arg(safeSource, post.id, ext);
+    // The id too: a plugin may return any string, and a "/" in it would point
+    // the file into a folder that does not exist.
+    static const QRegularExpression unsafe(QStringLiteral("[^A-Za-z0-9_.-]"));
+    const QString safeSource = QString(post.sourceName).replace(unsafe, QStringLiteral("_"));
+    const QString safeId = QString(post.id).replace(unsafe, QStringLiteral("_"));
+    const QString fileName = QStringLiteral("%1_%2.%3").arg(safeSource, safeId, ext);
     return m_downloadDir + QLatin1Char('/') + fileName;
 }
 
@@ -84,6 +89,23 @@ void DownloadManager::download(const Post &post)
         return;
     }
 
+    // A second click while the first download still runs: both would write
+    // the same file.
+    if (m_inFlight.contains(path)) {
+        NetworkLog::instance().log(QStringLiteral("  -> already downloading %1").arg(path));
+        return;
+    }
+
+    // QSaveFile writes to a temporary file next to the target and renames it
+    // only on commit(). A crash or a broken connection therefore leaves no
+    // half file behind that a later QFile::exists() would take as done.
+    auto *file = new QSaveFile(path);
+    if (!file->open(QIODevice::WriteOnly)) {
+        delete file;
+        emit downloadFinished(QString(), false, false, tr("nie można zapisać %1").arg(path));
+        return;
+    }
+
     NetworkLog::instance().log(QStringLiteral("GET %1 (download)").arg(post.fileUrl));
 
     QNetworkRequest req{QUrl(post.fileUrl)};
@@ -91,28 +113,55 @@ void DownloadManager::download(const Post &post)
     req.setTransferTimeout(30000);
 
     QNetworkReply *reply = m_manager->get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, path, post]() {
+    file->setParent(reply); // deleted together with the reply
+    m_inFlight.insert(path);
+
+    // Written as it arrives, so a large video is never held in memory whole.
+    connect(reply, &QNetworkReply::readyRead, reply, [reply, file]() {
+        const QByteArray chunk = reply->readAll();
+        if (file->write(chunk) != chunk.size()) {
+            // Disk full or similar: stop instead of downloading into nothing.
+            file->cancelWriting();
+            reply->abort();
+        }
+    });
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, file, path, post]() {
         reply->deleteLater();
+        m_inFlight.remove(path);
+
+        if (file->error() != QFileDevice::NoError) {
+            NetworkLog::instance().log(QStringLiteral("  -> ERROR writing %1: %2").arg(path, file->errorString()));
+            emit downloadFinished(QString(), false, false, tr("nie można zapisać %1").arg(path));
+            return;
+        }
         if (reply->error() != QNetworkReply::NoError) {
+            file->cancelWriting();
             NetworkLog::instance().log(QStringLiteral("  -> ERROR downloading: %1").arg(reply->errorString()));
             emit downloadFinished(QString(), false, false, reply->errorString());
             return;
         }
 
-        const QByteArray data = reply->readAll();
-        QFile file(path);
-        if (!file.open(QIODevice::WriteOnly)) {
+        // A Cloudflare challenge or a login page arrives as 200 OK too.
+        const QString contentType = reply->header(QNetworkRequest::ContentTypeHeader).toString().toLower();
+        if (contentType.startsWith(QStringLiteral("text/html"))) {
+            file->cancelWriting();
+            NetworkLog::instance().log(QStringLiteral("  -> REFUSED: %1 answered with a web page (%2)")
+                .arg(post.fileUrl, contentType));
+            emit downloadFinished(QString(), false, false,
+                tr("serwer zwrócił stronę WWW zamiast pliku (Cloudflare albo wymagane logowanie?)"));
+            return;
+        }
+
+        // Normally readyRead has taken everything; this catches the rest.
+        const QByteArray rest = reply->readAll();
+        if (!rest.isEmpty() && file->write(rest) != rest.size())
+            file->cancelWriting();
+        if (!file->commit()) {
+            NetworkLog::instance().log(QStringLiteral("  -> ERROR writing %1: %2").arg(path, file->errorString()));
             emit downloadFinished(QString(), false, false, tr("nie można zapisać %1").arg(path));
             return;
         }
-        // A short write (e.g. full disk) must not be indexed as a good file.
-        if (file.write(data) != data.size()) {
-            file.close();
-            QFile::remove(path);
-            emit downloadFinished(QString(), false, false, tr("nie można zapisać %1").arg(path));
-            return;
-        }
-        file.close();
 
         if (!post.tags.isEmpty()) {
             QFile sidecar(sidecarPathFor(path));
@@ -123,7 +172,7 @@ void DownloadManager::download(const Post &post)
         if (m_library)
             m_library->addOrUpdatePost(post, path);
 
-        NetworkLog::instance().log(QStringLiteral("  -> saved %1 (%2 bytes)").arg(path).arg(data.size()));
+        NetworkLog::instance().log(QStringLiteral("  -> saved %1 (%2 bytes)").arg(path).arg(QFileInfo(path).size()));
         emit downloadFinished(path, true, false, QString());
     });
 }

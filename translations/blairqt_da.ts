@@ -239,6 +239,11 @@
 <context>
     <name>DownloadManager</name>
     <message>
+        <location filename="../src/DownloadManager.cpp" line="152"/>
+        <source>serwer zwrócił stronę WWW zamiast pliku (Cloudflare albo wymagane logowanie?)</source>
+        <translation>serveren sendte en webside i stedet for filen (Cloudflare, eller kræves der login?)</translation>
+    </message>
+    <message>
         <location filename="../src/DownloadManager.cpp" line="55"/>
         <source>post nie ma pełnego pliku (fileUrl puste)</source>
         <translation>opslaget har ingen fuld fil (fileUrl tom)</translation>

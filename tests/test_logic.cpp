@@ -23,6 +23,7 @@
 #include "NetworkLog.h"
 #include "ThumbnailLoader.h"
 #include "ThemeManager.h"
+#include "DownloadManager.h"
 
 #include <QApplication>
 #include <QTemporaryDir>
@@ -39,6 +40,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPalette>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 #include <iostream>
 
 namespace {
@@ -395,6 +398,124 @@ void testLibraryDatabase()
     check("removed post is gone", db.count() == 2, QString::number(db.count()));
 }
 
+void testLibraryExactTags()
+{
+    begin("Library search matches whole tags");
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    LibraryDatabase db;
+    if (!db.isOpen()) {
+        check("database opens", false);
+        return;
+    }
+
+    const QString root = QDir::tempPath() + QStringLiteral("/blairqt-test-exact");
+    auto add = [&db](const QString &path, const QString &tags, const QString &id) {
+        Post p;
+        p.id = id;
+        p.sourceName = QStringLiteral("Exact");
+        p.tags = tags.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        db.addOrUpdatePost(p, path);
+    };
+    add(root + QStringLiteral("/art/1.jpg"), QStringLiteral("solo_focus 1girl"), QStringLiteral("e1"));
+    add(root + QStringLiteral("/Art/2.jpg"), QStringLiteral("hat red dress"), QStringLiteral("e2"));
+    add(root + QStringLiteral("/art/3.jpg"), QStringLiteral("Solo red_dress"), QStringLiteral("e3"));
+
+    auto ids = [](const QVector<Post> &posts) {
+        QStringList out;
+        for (const Post &p : posts)
+            out << p.id;
+        out.sort();
+        return out.join(QLatin1Char(','));
+    };
+
+    // FTS5 split tags at "_", so these used to match the wrong posts.
+    equal("solo does not find solo_focus", ids(db.search(QStringLiteral("solo"), -1)), QStringLiteral("e3"));
+    equal("red_dress does not find separate red and dress", ids(db.search(QStringLiteral("red_dress"), -1)),
+          QStringLiteral("e3"));
+    equal("all terms are required", ids(db.search(QStringLiteral("red dress"), -1)), QStringLiteral("e2"));
+    equal("case does not matter", ids(db.search(QStringLiteral("SOLO_FOCUS"), -1)), QStringLiteral("e1"));
+    equal("a repeated term counts once", ids(db.search(QStringLiteral("solo Solo"), -1)), QStringLiteral("e3"));
+
+    // LIKE ignored ASCII case: "art" and "Art" are different folders on Linux.
+    equal("folder filter respects case", ids(db.search(QString(), -1, 0, root + QStringLiteral("/art"))),
+          QStringLiteral("e1,e3"));
+    equal("folder name is not a prefix match",
+          ids(db.search(QString(), -1, 0, root + QStringLiteral("/ar"), true)), QString());
+
+    // Re-saving a post replaces its tags rather than adding to them.
+    add(root + QStringLiteral("/art/1.jpg"), QStringLiteral("landscape"), QStringLiteral("e1"));
+    check("old tags gone after an update", db.search(QStringLiteral("solo_focus"), -1).isEmpty());
+    equal("new tags searchable after an update", ids(db.search(QStringLiteral("landscape"), -1)),
+          QStringLiteral("e1"));
+
+    db.removePost(root + QStringLiteral("/art/3.jpg"));
+    check("removed post leaves no tags behind", db.suggestTags(QStringLiteral("red_d"), 10).isEmpty());
+}
+
+void testLibraryMigration()
+{
+    begin("Library database from 0.3.1 and earlier");
+    const QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+        + QStringLiteral("/library.sqlite3");
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    QFile::remove(path);
+
+    // The schema and triggers exactly as 0.3.1 created them.
+    {
+        QSqlDatabase legacy = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QStringLiteral("legacy"));
+        legacy.setDatabaseName(path);
+        check("legacy database opens", legacy.open());
+        QSqlQuery q(legacy);
+        q.exec(QStringLiteral(
+            "CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL,"
+            " post_id TEXT NOT NULL, file_path TEXT NOT NULL UNIQUE, file_url TEXT, preview_url TEXT,"
+            " rating TEXT, score INTEGER, width INTEGER, height INTEGER, source_url TEXT,"
+            " post_page_url TEXT, tags TEXT, downloaded_at TEXT NOT NULL)"));
+        q.exec(QStringLiteral("CREATE VIRTUAL TABLE posts_fts USING fts5(tags, content='posts', content_rowid='id')"));
+        q.exec(QStringLiteral("CREATE TRIGGER posts_ai AFTER INSERT ON posts BEGIN"
+                              " INSERT INTO posts_fts(rowid, tags) VALUES (new.id, new.tags); END"));
+        q.exec(QStringLiteral("CREATE TRIGGER posts_ad AFTER DELETE ON posts BEGIN"
+                              " INSERT INTO posts_fts(posts_fts, rowid, tags) VALUES('delete', old.id, old.tags); END"));
+        q.exec(QStringLiteral("CREATE TRIGGER posts_au AFTER UPDATE ON posts BEGIN"
+                              " INSERT INTO posts_fts(posts_fts, rowid, tags) VALUES('delete', old.id, old.tags);"
+                              " INSERT INTO posts_fts(rowid, tags) VALUES (new.id, new.tags); END"));
+        q.exec(QStringLiteral("INSERT INTO posts (source, post_id, file_path, tags, downloaded_at)"
+                              " VALUES ('Old', '1', '/old/a.jpg', 'solo_focus 1girl', 'x'),"
+                              "        ('Old', '2', '/old/b.jpg', 'solo', 'x')"));
+        legacy.close();
+    }
+    QSqlDatabase::removeDatabase(QStringLiteral("legacy"));
+
+    {
+        LibraryDatabase db;
+        check("migrated database opens", db.isOpen());
+        check("existing posts kept", db.count() == 2, QString::number(db.count()));
+        const QVector<Post> solo = db.search(QStringLiteral("solo"), -1);
+        check("existing tags searchable, exactly", solo.size() == 1 && solo.first().id == QStringLiteral("2"),
+              QString::number(solo.size()));
+        equal("existing tags suggested", db.suggestTags(QStringLiteral("solo_"), 10).join(QLatin1Char(',')),
+              QStringLiteral("solo_focus"));
+
+        // The dropped FTS triggers must not fire any more on writes.
+        Post p;
+        p.id = QStringLiteral("3");
+        p.sourceName = QStringLiteral("Old");
+        p.tags = {QStringLiteral("new_tag")};
+        db.addOrUpdatePost(p, QStringLiteral("/old/c.jpg"));
+        check("writes work after migration", db.search(QStringLiteral("new_tag"), -1).size() == 1);
+    }
+
+    // Opening again must not migrate twice and lose or duplicate anything.
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    {
+        LibraryDatabase db;
+        check("second open keeps all posts", db.count() == 3, QString::number(db.count()));
+        check("second open keeps tags", db.search(QStringLiteral("1girl"), -1).size() == 1);
+    }
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    QFile::remove(path);
+}
+
 void testViewerUrls()
 {
     begin("Viewer URLs (video vs image)");
@@ -649,6 +770,145 @@ void testThumbnailCancel()
     check("nothing delivered after cancelAll()", delivered == 0, QString::number(delivered));
 }
 
+// Minimal HTTP server for the download tests. Answers by path:
+//   /ok.png    200, image/png, full body
+//   /page.png  200, text/html (what a Cloudflare challenge looks like)
+//   /cut.png   promises 100000 bytes, sends 10, closes
+class TestHttpServer : public QTcpServer {
+public:
+    TestHttpServer()
+    {
+        connect(this, &QTcpServer::newConnection, this, [this]() {
+            while (hasPendingConnections()) {
+                QTcpSocket *socket = nextPendingConnection();
+                connect(socket, &QTcpSocket::readyRead, socket, [socket]() { answer(socket); });
+            }
+        });
+        listen(QHostAddress::LocalHost, 0);
+    }
+
+    QString url(const QString &path) const
+    {
+        return QStringLiteral("http://127.0.0.1:%1%2").arg(serverPort()).arg(path);
+    }
+
+    static QByteArray okBody() { return QByteArray("\x89PNG\r\n\x1a\nfake image data", 24); }
+
+private:
+    static void answer(QTcpSocket *socket)
+    {
+        const QByteArray request = socket->readAll();
+        const QByteArray firstLine = request.left(request.indexOf('\n'));
+        QByteArray response;
+        if (firstLine.contains(" /ok.png ")) {
+            const QByteArray body = okBody();
+            response = "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: "
+                + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" + body;
+        } else if (firstLine.contains(" /page.png ")) {
+            const QByteArray body = "<html><body>Checking your browser...</body></html>";
+            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "
+                + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" + body;
+        } else if (firstLine.contains(" /cut.png ")) {
+            response = "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: 100000\r\n\r\n0123456789";
+        } else {
+            response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        }
+        socket->write(response);
+        socket->flush();
+        socket->disconnectFromHost();
+    }
+};
+
+void testDownloads()
+{
+    begin("Downloads are written whole or not at all");
+
+    QTemporaryDir dir;
+    TestHttpServer server;
+    if (!dir.isValid() || !server.isListening()) {
+        check("temporary directory and test server", false);
+        return;
+    }
+
+    DownloadManager manager(nullptr);
+    manager.setDownloadDir(dir.path());
+
+    // Runs one download and waits for its result.
+    struct Result {
+        bool finished = false;
+        bool ok = false;
+        QString path;
+        QString error;
+    };
+    auto run = [&manager](const QString &id, const QString &url) {
+        Result result;
+        QMetaObject::Connection connection = QObject::connect(&manager, &DownloadManager::downloadFinished,
+            [&result](const QString &path, bool ok, bool, const QString &error) {
+                result.finished = true;
+                result.ok = ok;
+                result.path = path;
+                result.error = error;
+            });
+        Post post;
+        post.id = id;
+        post.sourceName = QStringLiteral("Test");
+        post.fileUrl = url;
+        manager.download(post);
+        QElapsedTimer waited;
+        waited.start();
+        while (!result.finished && waited.elapsed() < 10000)
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QObject::disconnect(connection);
+        return result;
+    };
+    // Everything in the folder, temporary QSaveFile leftovers included.
+    auto filesInDir = [&dir]() {
+        return QDir(dir.path()).entryList(QDir::Files | QDir::Hidden, QDir::Name);
+    };
+
+    const Result ok = run(QStringLiteral("1"), server.url(QStringLiteral("/ok.png")));
+    check("image downloaded", ok.finished && ok.ok, ok.error);
+    QFile saved(dir.filePath(QStringLiteral("Test_1.png")));
+    check("file has the full body", saved.open(QIODevice::ReadOnly) && saved.readAll() == TestHttpServer::okBody());
+
+    const Result page = run(QStringLiteral("2"), server.url(QStringLiteral("/page.png")));
+    check("web page instead of image is refused", page.finished && !page.ok, page.error);
+    check("no file left for the refused page", !QFile::exists(dir.filePath(QStringLiteral("Test_2.png"))));
+
+    const Result cut = run(QStringLiteral("3"), server.url(QStringLiteral("/cut.png")));
+    check("broken transfer reported", cut.finished && !cut.ok, cut.error);
+    check("no half file left behind", !QFile::exists(dir.filePath(QStringLiteral("Test_3.png"))));
+
+    // A "/" in an id must not point the file into another folder.
+    const Result slash = run(QStringLiteral("a/b"), server.url(QStringLiteral("/ok.png")));
+    check("id with a slash downloads", slash.finished && slash.ok, slash.error);
+    check("slash replaced in the file name", QFile::exists(dir.filePath(QStringLiteral("Test_a_b.png"))));
+
+    equal("only the two finished files remain", filesInDir().join(QLatin1Char(',')),
+          QStringLiteral("Test_1.png,Test_a_b.png"));
+}
+
+// A file the test cannot open is a failed check, not a silent empty read.
+QJsonObject readJsonFile(const QString &path)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        check("theme file readable", false, path);
+        return {};
+    }
+    return QJsonDocument::fromJson(f.readAll()).object();
+}
+
+void writeJsonFile(const QString &path, const QJsonObject &object)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly)) {
+        check("theme file writable", false, path);
+        return;
+    }
+    f.write(QJsonDocument(object).toJson());
+}
+
 void testTheme()
 {
     begin("Theme palette");
@@ -659,11 +919,7 @@ void testTheme()
 
     // First run: a starter file, but the system palette stays live.
     ThemeManager::applyTheme();
-    QJsonObject root = QJsonDocument::fromJson([&path]() {
-        QFile f(path);
-        f.open(QIODevice::ReadOnly);
-        return f.readAll();
-    }()).object();
+    QJsonObject root = readJsonFile(path);
     check("starter file holds no applied colors", !root.contains(QStringLiteral("colors")));
     check("starter file offers example colors", root.contains(QStringLiteral("exampleColors")));
 
@@ -675,11 +931,7 @@ void testTheme()
     colors[QStringLiteral("text")] = QStringLiteral("#E5E9F0");
     colors[QStringLiteral("base")] = QStringLiteral("#2E3440");
     root[QStringLiteral("colors")] = colors;
-    {
-        QFile f(path);
-        f.open(QIODevice::WriteOnly);
-        f.write(QJsonDocument(root).toJson());
-    }
+    writeJsonFile(path, root);
     ThemeManager::applyTheme();
     const QPalette themed = QApplication::palette();
     equal("theme color applied", themed.color(QPalette::Active, QPalette::ButtonText).name(),
@@ -696,17 +948,9 @@ void testTheme()
     old[QStringLiteral("colors")] = snapshot;
     old[QStringLiteral("systemDefaultColors")] = snapshot;
     old[QStringLiteral("defaultIconSize")] = 220;
-    {
-        QFile f(path);
-        f.open(QIODevice::WriteOnly);
-        f.write(QJsonDocument(old).toJson());
-    }
+    writeJsonFile(path, old);
     ThemeManager::applyTheme();
-    root = QJsonDocument::fromJson([&path]() {
-        QFile f(path);
-        f.open(QIODevice::ReadOnly);
-        return f.readAll();
-    }()).object();
+    root = readJsonFile(path);
     check("old seeded snapshot removed", !root.contains(QStringLiteral("colors"))
           && !root.contains(QStringLiteral("systemDefaultColors")));
     check("system palette back in use",
@@ -740,7 +984,10 @@ int main(int argc, char **argv)
     testTagExclusionComposition();
     testPluginSource();
     testLibraryDatabase();
+    testLibraryExactTags();
+    testLibraryMigration();
     testThumbnailCancel();
+    testDownloads();
     // Last: it changes the application palette.
     testTheme();
 

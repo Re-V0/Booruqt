@@ -166,6 +166,8 @@ if(BUILD_TESTING)
         src/NetworkLog.cpp
         src/ThumbnailLoader.cpp
         src/ThemeManager.cpp
+        src/DownloadManager.cpp
+        src/FolderAccessGuard.cpp
     )
     target_include_directories(blairqt_tests PRIVATE src)
     target_link_libraries(blairqt_tests PRIVATE Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent)

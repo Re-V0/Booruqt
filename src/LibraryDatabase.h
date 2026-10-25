@@ -13,7 +13,11 @@
 #include <QStringList>
 #include "Post.h"
 
-// SQLite-backed local library: downloaded posts, searchable by tag via FTS5.
+// SQLite-backed local library: downloaded posts, searchable by tag.
+//
+// Tags live twice: as the space-separated "tags" column of a post (what it
+// was downloaded with, shown to the user) and one row per tag in post_tags
+// (what search and suggestions use). Every write keeps the two in step.
 class LibraryDatabase {
 public:
     LibraryDatabase();
@@ -25,6 +29,8 @@ public:
     void addOrUpdatePost(const Post &post, const QString &filePath);
 
     // Empty tagQuery returns everything; empty dirFilter means any folder.
+    // Every tag in tagQuery must match a whole tag of the post (ignoring
+    // ASCII case): "solo" does not find "solo_focus".
     // Paging is keyed, not offset-based: beforeId > 0 continues below that row
     // id, so deleting or moving files between pages cannot make rows repeat or
     // disappear the way a shifting OFFSET does.
@@ -46,6 +52,11 @@ public:
 
 private:
     void ensureSchema();
+    // Schema 1 searched through an FTS5 index, which split tags at "_" and
+    // "(". Schema 2 replaces it with the post_tags table.
+    bool migrateToTagTable();
+    // Rewrites post_tags for one post. Caller holds the transaction.
+    bool replaceTags(qint64 rowId, const QString &tags);
 
     QSqlDatabase m_db;
 };

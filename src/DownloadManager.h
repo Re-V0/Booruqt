@@ -9,6 +9,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QSet>
 #include "Post.h"
 
 class QNetworkAccessManager;
@@ -39,4 +40,6 @@ private:
     QNetworkAccessManager *m_manager;
     LibraryDatabase *m_library;
     QString m_downloadDir;
+    // Target paths of downloads still running.
+    QSet<QString> m_inFlight;
 };
