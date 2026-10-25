@@ -151,8 +151,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       # Portable layout: blairqt.exe, translations\, plugin_runner.py and
-      # tools\ side by side, plus the Qt DLLs (windeployqt) and the MSVC
-      # runtime, so nothing has to be installed first.
+      # tools\ side by side, plus the Qt DLLs and plugins (windeployqt).
+      #
+      # The MSVC runtime is not copied in as DLLs. windeployqt adds the
+      # Visual C++ redistributable installer, vc_redist.x64.exe, from the
+      # Visual Studio that built the program, and README.txt in the zip
+      # says to run it once per computer: the zip alone does not run on a
+      # Windows without that runtime.
+      #
+      # Of the SQL drivers only SQLite is used; the others need client
+      # libraries (libpq.dll and more) that the zip does not ship.
       - name: Package
         shell: pwsh
         run: |
@@ -160,11 +168,138 @@ jobs:
           $dist = "dist\blairqt-$version-windows-x64"
           cmake --install build --prefix $dist
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$dist\blairqt.exe"
+          windeployqt --release --compiler-runtime --no-translations --no-system-d3d-compiler --no-opengl-sw `
+            --exclude-plugins qsqlmimer,qsqlodbc,qsqlpsql "$dist\blairqt.exe"
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          Copy-Item "$env:VCToolsRedistDir\x64\Microsoft.VC143.CRT\*.dll" $dist
-          if (-not (Test-Path "$dist\sqldrivers\qsqlite.dll")) { throw "SQLite driver missing from the package" }
+
+          $redist = Join-Path $dist 'vc_redist.x64.exe'
+          if (-not (Test-Path $redist)) { throw "windeployqt did not add vc_redist.x64.exe" }
+          $runtimeVersion = (Get-Item $redist).VersionInfo.ProductVersion
+          Write-Output "Visual C++ runtime in the package: $runtimeVersion"
+
+          $readme = (Get-Content packaging\windows\README.txt -Raw).Replace("`r`n", "`n").Replace("`n", "`r`n")
+          $readme = $readme.Replace('@VERSION@', $version).Replace('@RUNTIME_VERSION@', $runtimeVersion)
+          Set-Content -Path "$dist\README.txt" -Value $readme -Encoding utf8 -NoNewline
+
           Compress-Archive -Path $dist -DestinationPath "blairqt-$version-windows-x64.zip"
+
+      # Checks the zip as a user gets it: unpacked to a new folder, with the
+      # Qt installation hidden and only Windows on PATH, so nothing missing
+      # from the zip can be found somewhere else on the runner.
+      #
+      # The runner has the Visual C++ runtime installed, so the start below
+      # cannot show that vc_redist.x64.exe is needed. The import check lists
+      # which DLLs come from it instead.
+      - name: Check the package
+        shell: pwsh
+        run: |
+          $zip = (Get-ChildItem blairqt-*-windows-x64.zip | Select-Object -First 1).FullName
+          $unpacked = Join-Path $env:RUNNER_TEMP 'zipcheck'
+          Expand-Archive -Path $zip -DestinationPath $unpacked
+          $app = (Get-ChildItem $unpacked -Directory | Select-Object -First 1).FullName
+          Write-Output "Checking $zip, unpacked in $app"
+
+          # 1. The files the program needs at run time.
+          $required = @(
+            'blairqt.exe', 'README.txt', 'vc_redist.x64.exe', 'plugin_runner.py', 'tools\html_scrape_bridge.py',
+            'translations\blairqt_en.qm', 'translations\blairqt_de.qm',
+            'translations\blairqt_da.qm', 'translations\blairqt_ru.qm',
+            'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'Qt6Sql.dll',
+            'platforms\qwindows.dll', 'sqldrivers\qsqlite.dll', 'tls\qschannelbackend.dll',
+            'imageformats\qjpeg.dll', 'imageformats\qgif.dll', 'styles\qmodernwindowsstyle.dll')
+          $missing = @($required | Where-Object { -not (Test-Path (Join-Path $app $_)) })
+          if ($missing.Count -gt 0) { throw "missing from the package: $($missing -join ', ')" }
+          $unwanted = @('sqldrivers\qsqlpsql.dll', 'sqldrivers\qsqlmimer.dll', 'sqldrivers\qsqlodbc.dll')
+          $present = @($unwanted | Where-Object { Test-Path (Join-Path $app $_) })
+          if ($present.Count -gt 0) { throw "should have been left out: $($present -join ', ')" }
+
+          # 2. Every DLL a binary in the package imports must be next to
+          #    blairqt.exe, part of Windows, or the Visual C++ runtime.
+          $vcRuntime = @('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_1.dll',
+                         'msvcp140_2.dll', 'msvcp140_atomic_wait.dll', 'msvcp140_codecvt_ids.dll',
+                         'concrt140.dll', 'vccorlib140.dll', 'vcomp140.dll')
+          $nextToExe = @{}
+          foreach ($file in Get-ChildItem $app -File -Filter *.dll) {
+            $nextToExe[$file.Name.ToLower()] = $true
+          }
+          $fromRedist = @{}
+          $unresolved = @()
+          foreach ($binary in Get-ChildItem $app -Recurse -File -Include *.dll, *.exe) {
+            if ($binary.Name -eq 'vc_redist.x64.exe') { continue }
+            $output = dumpbin /nologo /dependents $binary.FullName
+            if ($LASTEXITCODE -ne 0) { throw "dumpbin failed on $($binary.FullName)" }
+            foreach ($line in $output) {
+              if (-not ($line -match '^\s+(\S+\.dll)\s*$')) { continue }
+              $dll = $Matches[1].ToLower()
+              if ($nextToExe.ContainsKey($dll)) { continue }
+              if ($dll.StartsWith('api-ms-win-') -or $dll.StartsWith('ext-ms-')) { continue }
+              if ($vcRuntime -contains $dll) { $fromRedist[$dll] = $true; continue }
+              if (Test-Path (Join-Path $env:SystemRoot "System32\$dll")) { continue }
+              $unresolved += "$($binary.FullName.Substring($app.Length + 1)) imports $dll"
+            }
+          }
+          if ($unresolved.Count -gt 0) { throw ("imports found nowhere:`n" + ($unresolved -join "`n")) }
+          Write-Output "Imports from the Visual C++ runtime (vc_redist.x64.exe): $(($fromRedist.Keys | Sort-Object) -join ', ')"
+
+          # 3. Start it. The first start opens the main window and the
+          #    welcome dialog and waits there, so after a while it must
+          #    still run and show a window of its own.
+          if (-not $env:QT_ROOT_DIR -or -not (Test-Path $env:QT_ROOT_DIR)) { throw "QT_ROOT_DIR is not the Qt installation" }
+          $qtLeaf = Split-Path $env:QT_ROOT_DIR -Leaf
+          $qtHidden = "$env:QT_ROOT_DIR.hidden"
+          Rename-Item -Path $env:QT_ROOT_DIR -NewName "$qtLeaf.hidden"
+          try {
+            $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+            Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+            Remove-Item Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
+            $env:QT_FORCE_STDERR_LOGGING = '1'
+            $env:QT_DEBUG_PLUGINS = '1'
+            $log = Join-Path $env:RUNNER_TEMP 'blairqt-start.log'
+            $process = Start-Process -FilePath (Join-Path $app 'blairqt.exe') -WorkingDirectory $app `
+              -RedirectStandardError $log -PassThru
+            # Without a handle taken now, ExitCode stays empty after exit.
+            $null = $process.Handle
+            Start-Sleep -Seconds 20
+            $running = -not $process.HasExited
+            $windowTitle = ''
+            if ($running) {
+              $process.Refresh()
+              $windowTitle = $process.MainWindowTitle
+              Stop-Process -Id $process.Id -Force
+            }
+          } finally {
+            Rename-Item -Path $qtHidden -NewName $qtLeaf
+          }
+
+          $lines = @(Get-Content $log)
+          Write-Output "--- program output ($($lines.Count) lines)"
+          $lines | ForEach-Object { Write-Output $_ }
+          Write-Output '---'
+          if (-not $running) {
+            throw ("blairqt.exe exited during start, exit code 0x{0:X8}" -f $process.ExitCode)
+          }
+          # A missing DLL leaves the process waiting behind a system error
+          # box, which belongs to Windows; only a window of its own shows
+          # that the program got as far as its first dialog.
+          Write-Output "Window: '$windowTitle'"
+          if ($windowTitle -notlike '*B.LAIR_QT*') { throw "blairqt.exe runs but shows no window of its own" }
+          $errors = @($lines | Where-Object { $_ -match 'driver not loaded|Could not (find|load) the Qt platform plugin|LibraryDatabase: failed' })
+          if ($errors.Count -gt 0) { throw ("errors during start:`n" + ($errors -join "`n")) }
+          # Plugins must come from the package; the Qt installation is hidden,
+          # so a path outside the package and Windows means a stray copy
+          # somewhere on the runner.
+          $appSlashes = $app.Replace('\', '/')
+          $windowsSlashes = $env:SystemRoot.Replace('\', '/')
+          $loaded = @($lines | Where-Object { $_ -match 'loaded library' })
+          $outside = @($loaded | Where-Object { -not $_.ToLower().Contains($appSlashes.ToLower()) } |
+            Where-Object { -not $_.ToLower().Contains($windowsSlashes.ToLower()) })
+          if ($outside.Count -gt 0) { throw ("plugins loaded from outside the package:`n" + ($outside -join "`n")) }
+          foreach ($plugin in @('qwindows.dll', 'qsqlite.dll')) {
+            if (-not ($loaded | Where-Object { $_ -match [regex]::Escape($plugin) })) {
+              throw "$plugin was not loaded during start"
+            }
+          }
+          Write-Output "Started from the package; loaded: $(($loaded | ForEach-Object { ($_ -split '[/\\]')[-1] -replace '".*', '' }) -join ', ')"
 
       - uses: actions/upload-artifact@v7
         with:

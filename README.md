@@ -40,9 +40,12 @@ sudo apt install ./blairqt_<version>-ubuntu26.04_amd64.deb  # Ubuntu 26.04 (or -
 sudo pkg add blairqt-<version>-freebsd15-amd64.pkg          # FreeBSD 15 (or -freebsd14)
 ```
 
-Windows (64-bit): unpack `blairqt-<version>-windows-x64.zip` anywhere and run
-`blairqt.exe`. Nothing is installed; settings and the library index live in
-your user profile.
+Windows (64-bit): unpack `blairqt-<version>-windows-x64.zip` anywhere. Once
+per computer, run `vc_redist.x64.exe` from that folder: it installs the
+Microsoft Visual C++ runtime, which the zip does not contain, and without it
+`blairqt.exe` does not start. Then run `blairqt.exe`. The program itself
+installs nothing; settings and the library index live in your user profile.
+`README.txt` in the zip says which runtime version the build needs.
 
 macOS (Apple Silicon): open `blairqt-<version>-macos-arm64.dmg` and drag
 B.LAIR_QT to Applications. The app is not signed with an Apple Developer ID,
