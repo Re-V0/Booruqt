@@ -72,10 +72,45 @@ target_link_libraries(blairqt PRIVATE
     Qt6::Sql
 )
 
+# Install layout per platform. The files the program reads at run time
+# (translations/, plugin_runner.py, tools/) go into one data folder, and
+# findAppFile() in src/AppInfo.h looks in exactly these places:
+#   Linux, FreeBSD  FHS: bin/blairqt, data in share/blairqt
+#   Windows         portable: blairqt.exe with the data next to it
+#   macOS           blairqt.app, data in blairqt.app/Contents/Resources
 include(GNUInstallDirs)
-install(TARGETS blairqt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES resources/blairqt.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-install(FILES resources/blairqt.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+if(WIN32)
+    # A GUI program: no console window opens next to it.
+    set_target_properties(blairqt PROPERTIES WIN32_EXECUTABLE ON)
+    install(TARGETS blairqt RUNTIME DESTINATION .)
+    set(BLAIRQT_INSTALL_DATA_DIR .)
+elseif(APPLE)
+    # The icon file (blairqt.icns) is made from blairqt.svg by the release
+    # workflow and copied into Contents/Resources there.
+    set_target_properties(blairqt PROPERTIES
+        MACOSX_BUNDLE ON
+        MACOSX_BUNDLE_BUNDLE_NAME "B.LAIR_QT"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.gitlab.re-v0.blairqt"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_ICON_FILE "blairqt.icns"
+    )
+    install(TARGETS blairqt BUNDLE DESTINATION .)
+    set(BLAIRQT_INSTALL_DATA_DIR blairqt.app/Contents/Resources)
+else()
+    install(TARGETS blairqt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES resources/blairqt.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES resources/blairqt.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+    set(BLAIRQT_INSTALL_DATA_DIR ${CMAKE_INSTALL_DATADIR}/blairqt)
+    target_compile_definitions(blairqt PRIVATE BLAIRQT_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/blairqt")
+endif()
+
+if(MSVC)
+    # The sources are UTF-8 (the Polish tr() strings). Without /utf-8 MSVC
+    # reads them in the local code page, the strings arrive garbled, and no
+    # translation lookup ever matches.
+    target_compile_options(blairqt PRIVATE /utf-8)
+endif()
 
 # Translations: .ts files are hand-maintained (translations/*.ts) and always
 # compiled to .qm at build time via lrelease - lupdate is NOT run
@@ -97,18 +132,12 @@ set(BLAIRQT_TS_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/translations/blairqt_ru.ts
 )
 
-target_compile_definitions(blairqt PRIVATE
-    BLAIRQT_VERSION="${PROJECT_VERSION}"
-    BLAIRQT_TRANSLATIONS_DIR="${CMAKE_INSTALL_FULL_DATADIR}/blairqt/translations"
-    BLAIRQT_PLUGIN_RUNNER_PATH="${CMAKE_INSTALL_FULL_DATADIR}/blairqt/plugin_runner.py"
-    BLAIRQT_HTML_BRIDGE_PATH="${CMAKE_INSTALL_FULL_DATADIR}/blairqt/tools/html_scrape_bridge.py"
-)
+target_compile_definitions(blairqt PRIVATE BLAIRQT_VERSION="${PROJECT_VERSION}")
 
 # plugin_runner.py (the "python" source flavor's plugin bridge, see
 # PythonPluginSource) is a plain script, not compiled - just copied next to
 # the dev binary (mirroring how translations/*.qm land in build/translations/)
-# and installed to the same FHS-proper location the compile definition above
-# points at.
+# and installed into the data folder.
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/plugin_runner.py"
     COMMAND ${CMAKE_COMMAND} -E copy
@@ -119,8 +148,8 @@ add_custom_command(
 )
 add_custom_target(blairqt_plugin_runner ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/plugin_runner.py")
 add_dependencies(blairqt blairqt_plugin_runner)
-install(FILES resources/plugin_runner.py DESTINATION ${CMAKE_INSTALL_DATADIR}/blairqt)
-install(PROGRAMS tools/html_scrape_bridge.py DESTINATION ${CMAKE_INSTALL_DATADIR}/blairqt/tools)
+install(FILES resources/plugin_runner.py DESTINATION ${BLAIRQT_INSTALL_DATA_DIR})
+install(PROGRAMS tools/html_scrape_bridge.py DESTINATION ${BLAIRQT_INSTALL_DATA_DIR}/tools)
 
 if(LRELEASE_EXECUTABLE)
     set(BLAIRQT_QM_FILES)
@@ -140,7 +169,7 @@ if(LRELEASE_EXECUTABLE)
     add_custom_target(blairqt_translations ALL DEPENDS ${BLAIRQT_QM_FILES})
     add_dependencies(blairqt blairqt_translations)
 
-    install(FILES ${BLAIRQT_QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/blairqt/translations)
+    install(FILES ${BLAIRQT_QM_FILES} DESTINATION ${BLAIRQT_INSTALL_DATA_DIR}/translations)
 else()
     message(WARNING "lrelease not found - blairqt will build without translations")
 endif()
@@ -172,6 +201,9 @@ if(BUILD_TESTING)
         resources/resources.qrc
     )
     target_include_directories(blairqt_tests PRIVATE src)
+    if(MSVC)
+        target_compile_options(blairqt_tests PRIVATE /utf-8)
+    endif()
     target_link_libraries(blairqt_tests PRIVATE Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent)
     add_test(NAME logic COMMAND blairqt_tests)
     set_tests_properties(logic PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

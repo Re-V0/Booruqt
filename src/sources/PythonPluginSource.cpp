@@ -7,13 +7,46 @@
 
 #include "PythonPluginSource.h"
 #include "../NetworkLog.h"
+#include "../AppInfo.h"
 
 #include <QProcess>
-#include <QCoreApplication>
 #include <QFile>
 #include <QJsonArray>
 #include <QUrl>
+#include <QStandardPaths>
 #include <utility>
+
+namespace {
+
+// The interpreter and the arguments that select Python 3, or an empty list.
+// BLAIRQT_PYTHON overrides the search, for an interpreter not on PATH.
+//
+// Windows: "py -3" first. It is the launcher python.org installs, while
+// "python3" and "python" on a machine without Python are Microsoft Store
+// stubs that open the Store instead of running anything.
+QStringList pythonCommand()
+{
+    const QString overridden = qEnvironmentVariable("BLAIRQT_PYTHON");
+    if (!overridden.isEmpty())
+        return {overridden};
+
+#ifdef Q_OS_WIN
+    const QString launcher = QStandardPaths::findExecutable(QStringLiteral("py"));
+    if (!launcher.isEmpty())
+        return {launcher, QStringLiteral("-3")};
+    const QStringList names = {QStringLiteral("python"), QStringLiteral("python3")};
+#else
+    const QStringList names = {QStringLiteral("python3"), QStringLiteral("python")};
+#endif
+    for (const QString &name : names) {
+        const QString path = QStandardPaths::findExecutable(name);
+        if (!path.isEmpty())
+            return {path};
+    }
+    return {};
+}
+
+} // namespace
 
 PythonPluginSource::PythonPluginSource(QString name, QString baseUrl, QString scriptPath)
     : m_name(std::move(name)), m_baseUrl(std::move(baseUrl)), m_scriptPath(std::move(scriptPath))
@@ -22,18 +55,7 @@ PythonPluginSource::PythonPluginSource(QString name, QString baseUrl, QString sc
 
 QString PythonPluginSource::runnerScriptPath()
 {
-    // Same dev-vs-installed lookup as main.cpp's loadTranslation().
-    const QString devPath = QCoreApplication::applicationDirPath() + QStringLiteral("/plugin_runner.py");
-    if (QFile::exists(devPath))
-        return devPath;
-
-#ifdef BLAIRQT_PLUGIN_RUNNER_PATH
-    const QString installedPath = QStringLiteral(BLAIRQT_PLUGIN_RUNNER_PATH);
-    if (QFile::exists(installedPath))
-        return installedPath;
-#endif
-
-    return devPath;
+    return findAppFile(QStringLiteral("plugin_runner.py"));
 }
 
 QJsonDocument PythonPluginSource::runPlugin(const QString &mode, const QJsonObject &stdinJson) const
@@ -44,11 +66,22 @@ QJsonDocument PythonPluginSource::runPlugin(const QString &mode, const QJsonObje
         return {};
     }
 
-    QProcess process;
-    process.start(QStringLiteral("python3"), {runnerScriptPath(), m_scriptPath, mode});
-    if (!process.waitForStarted(3000)) {
-        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: could not start python3 (is it installed?)")
+    const QStringList python = pythonCommand();
+    if (python.isEmpty()) {
+        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: no Python 3 found "
+                                                  "(looked for py, python3, python; or set BLAIRQT_PYTHON)")
             .arg(m_name));
+        return {};
+    }
+
+    QStringList arguments = python.mid(1);
+    arguments << runnerScriptPath() << m_scriptPath << mode;
+
+    QProcess process;
+    process.start(python.first(), arguments);
+    if (!process.waitForStarted(3000)) {
+        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: could not start %2")
+            .arg(m_name, python.first()));
         return {};
     }
 

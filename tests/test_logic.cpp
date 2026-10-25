@@ -25,6 +25,7 @@
 #include "ThemeManager.h"
 #include "DownloadManager.h"
 #include "SourceManager.h"
+#include "AppInfo.h"
 
 #include <QApplication>
 #include <QTemporaryDir>
@@ -103,6 +104,19 @@ void testHtmlEntities()
           QString::fromUcs4(&grinning, 1));
     equal("lone surrogate rejected", decodeHtmlEntities(QStringLiteral("&#55357;")),
           QStringLiteral("&#55357;"));
+}
+
+void testAppFiles()
+{
+    begin("Files shipped with the program are found");
+    // The test binary sits in the build dir, like a development build of the
+    // program: plugin_runner.py and translations/ are copied next to it.
+    const QString runner = findAppFile(QStringLiteral("plugin_runner.py"));
+    check("plugin_runner.py found next to the binary", QFile::exists(runner), runner);
+    const QString qm = findAppFile(QStringLiteral("translations/blairqt_de.qm"));
+    check("translations found next to the binary", QFile::exists(qm), qm);
+    const QString missing = findAppFile(QStringLiteral("no_such_file.txt"));
+    check("a missing file still yields a path to report", !missing.isEmpty() && !QFile::exists(missing), missing);
 }
 
 void testNetworkLogRedaction()
@@ -1053,6 +1067,7 @@ int main(int argc, char **argv)
                   + QStringLiteral("/library.sqlite3"));
 
     testHtmlEntities();
+    testAppFiles();
     testNetworkLogRedaction();
     testBlacklist();
     testTagInput();

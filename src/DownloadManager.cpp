@@ -21,6 +21,35 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 
+#ifdef Q_OS_WIN
+#define NOMINMAX // windows.h would otherwise define min()/max() macros
+#include <windows.h>
+#endif
+
+namespace {
+
+// Writes the tags sidecar. Unix hides it by the leading dot in its name;
+// Windows ignores the dot and needs the hidden attribute, without which
+// every image would get a visible .txt neighbour in Explorer.
+void writeSidecar(const QString &path, const QStringList &tags)
+{
+#ifdef Q_OS_WIN
+    // Windows refuses to truncate an existing hidden file for writing.
+    QFile::remove(path);
+#endif
+    QFile sidecar(path);
+    if (!sidecar.open(QIODevice::WriteOnly))
+        return;
+    sidecar.write(tags.join(QLatin1Char(' ')).toUtf8());
+    sidecar.close();
+#ifdef Q_OS_WIN
+    const QString nativePath = QDir::toNativeSeparators(path);
+    SetFileAttributesW(reinterpret_cast<const wchar_t *>(nativePath.utf16()), FILE_ATTRIBUTE_HIDDEN);
+#endif
+}
+
+} // namespace
+
 DownloadManager::DownloadManager(LibraryDatabase *library, QObject *parent)
     : QObject(parent), m_manager(new QNetworkAccessManager(this)), m_library(library)
 {
@@ -163,11 +192,8 @@ void DownloadManager::download(const Post &post)
             return;
         }
 
-        if (!post.tags.isEmpty()) {
-            QFile sidecar(sidecarPathFor(path));
-            if (sidecar.open(QIODevice::WriteOnly))
-                sidecar.write(post.tags.join(QLatin1Char(' ')).toUtf8());
-        }
+        if (!post.tags.isEmpty())
+            writeSidecar(sidecarPathFor(path), post.tags);
 
         if (m_library)
             m_library->addOrUpdatePost(post, path);

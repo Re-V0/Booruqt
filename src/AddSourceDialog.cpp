@@ -10,6 +10,7 @@
 #include "sources/ISource.h"
 #include "Post.h"
 #include "NetworkLog.h"
+#include "AppInfo.h"
 
 #include <QLineEdit>
 #include <QComboBox>
@@ -24,6 +25,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QFileDialog>
+#include <QDir>
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrent>
 
@@ -103,11 +105,7 @@ AddSourceDialog::AddSourceDialog(QWidget *parent)
     // For API-less sites: scrapes HTML via the local Python bridge instead.
     m_htmlBridgeCheck = new QCheckBox(
         tr("Ta strona nie ma API (dapi) - scrapuj HTML przez lokalny most"), this);
-#ifdef BLAIRQT_HTML_BRIDGE_PATH
-    const QString bridgePath = QStringLiteral(BLAIRQT_HTML_BRIDGE_PATH);
-#else
-    const QString bridgePath = QStringLiteral("tools/html_scrape_bridge.py");
-#endif
+    const QString bridgePath = QDir::toNativeSeparators(findAppFile(QStringLiteral("tools/html_scrape_bridge.py")));
     m_htmlBridgeCheck->setToolTip(tr("Uruchom go najpierw: python3 %1").arg(bridgePath));
     connect(m_htmlBridgeCheck, &QCheckBox::toggled, this, &AddSourceDialog::onHtmlBridgeToggled);
 

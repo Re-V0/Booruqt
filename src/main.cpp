@@ -8,28 +8,16 @@
 #include <QApplication>
 #include <QTranslator>
 #include <QSettings>
-#include <QDir>
 #include "MainWindow.h"
 #include "ThemeManager.h"
+#include "AppInfo.h"
 
 namespace {
 
-// Tries the dev-build path next to the binary, then the installed path.
 bool loadTranslation(QTranslator &translator, const QString &langCode)
 {
     const QString fileName = QStringLiteral("blairqt_%1.qm").arg(langCode);
-
-    const QString devPath = QCoreApplication::applicationDirPath() + QStringLiteral("/translations/") + fileName;
-    if (translator.load(devPath))
-        return true;
-
-#ifdef BLAIRQT_TRANSLATIONS_DIR
-    const QString installedPath = QDir(QStringLiteral(BLAIRQT_TRANSLATIONS_DIR)).filePath(fileName);
-    if (translator.load(installedPath))
-        return true;
-#endif
-
-    return false;
+    return translator.load(findAppFile(QStringLiteral("translations/") + fileName));
 }
 
 }
