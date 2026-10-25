@@ -88,6 +88,15 @@ constexpr int kLibraryPageSize = 300;
 // added nothing visible, before it gives up and waits for the user.
 constexpr int kMaxAutoLoadChain = 5;
 constexpr int kDefaultThumbnailSize = 220;
+// The delegate draws the thumbnail inside this margin of its cell.
+constexpr int kCellMargin = 4;
+
+// Thumbnails are decoded at exactly the size they are drawn at, so painting
+// never has to rescale them.
+QSize thumbnailSizeForCell(const QSize &cell)
+{
+    return cell - QSize(2 * kCellMargin, 2 * kCellMargin);
+}
 
 // Paints each cell as a fixed-size, letterboxed, centered thumbnail.
 class ThumbnailDelegate : public QStyledItemDelegate {
@@ -114,7 +123,7 @@ public:
 
         const QPixmap pixmap = index.data(GalleryModel::ThumbnailRole).value<QPixmap>();
         if (!pixmap.isNull()) {
-            const QRect target = cellRect.adjusted(4, 4, -4, -4);
+            const QRect target = cellRect.adjusted(kCellMargin, kCellMargin, -kCellMargin, -kCellMargin);
             const QPixmap scaled = pixmap.scaled(target.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
             const QPoint topLeft(target.x() + (target.width() - scaled.width()) / 2,
                                   target.y() + (target.height() - scaled.height()) / 2);
@@ -148,6 +157,37 @@ void configureGalleryView(QListView *view)
     view->setGridSize(cellSize);
 }
 
+// Requests thumbnails for the rows inside the viewport. Rows are laid out in
+// model order, so their tops never decrease going down the model: a binary
+// search finds the first visible row and the loop stops at the first row
+// below the viewport. The cost is the visible rows, not the whole model,
+// which matters with autoscroll running every 40 ms over thousands of rows.
+void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *loader)
+{
+    const int rowCount = model->rowCount();
+    const int viewportHeight = view->viewport()->height();
+
+    int low = 0;
+    int high = rowCount;
+    while (low < high) {
+        const int mid = low + (high - low) / 2;
+        if (view->visualRect(model->index(mid)).bottom() < 0)
+            low = mid + 1;
+        else
+            high = mid;
+    }
+
+    for (int row = low; row < rowCount; ++row) {
+        const QModelIndex idx = model->index(row);
+        if (view->visualRect(idx).top() > viewportHeight)
+            break;
+        if (idx.data(GalleryModel::ThumbnailRequestedRole).toBool())
+            continue;
+        model->markThumbnailRequested(row);
+        loader->request(row, QUrl(model->postAt(row).previewUrl));
+    }
+}
+
 // rename() fails across filesystems; falls back to copy + remove.
 bool moveFile(const QString &from, const QString &to)
 {
@@ -179,7 +219,15 @@ MainWindow::MainWindow(QWidget *parent)
     m_downloadManager->setDownloadDir(settings.value(QStringLiteral("downloadDir"), defaultDir).toString());
     refreshLibraryFolderTreeRoot();
     m_resultsPerPage = settings.value(QStringLiteral("resultsPerPage"), m_resultsPerPage).toInt();
+
+    // The loaders start at the default cell; a slider change resizes them.
+    m_thumbnailLoader->setTargetSize(thumbnailSizeForCell(QSize(kDefaultThumbnailSize, kDefaultThumbnailSize)));
+    m_libraryThumbnailLoader->setTargetSize(thumbnailSizeForCell(QSize(kDefaultThumbnailSize, kDefaultThumbnailSize)));
+    // Read before applyThemeIconSize(): moving the slider saves its value.
+    const int savedThumbnailSize = settings.value(QStringLiteral("thumbnailSize"), 0).toInt();
     applyThemeIconSize();
+    if (savedThumbnailSize >= m_sizeSlider->minimum() && savedThumbnailSize <= m_sizeSlider->maximum())
+        m_sizeSlider->setValue(savedThumbnailSize);
 
     connect(m_thumbnailLoader, &ThumbnailLoader::thumbnailReady, this, &MainWindow::onThumbnailReady);
     connect(m_searchButton, &QPushButton::clicked, this, &MainWindow::startNewSearch);
@@ -675,7 +723,8 @@ QWidget *MainWindow::buildSearchTab()
 QWidget *MainWindow::buildLibraryTab()
 {
     m_libraryModel = new GalleryModel(this);
-    m_libraryThumbnailLoader = new ThumbnailLoader(this);
+    // Library thumbnails are local files: nothing to cache.
+    m_libraryThumbnailLoader = new ThumbnailLoader(this, /*useDiskCache=*/false);
 
     auto *central = new QWidget(this);
     auto *rootLayout = new QVBoxLayout(central);
@@ -965,7 +1014,7 @@ void MainWindow::onIconSizeChanged(int value)
     };
 
     syncSlider(m_sizeSlider);
-    m_thumbnailLoader->setTargetSize(size);
+    m_thumbnailLoader->setTargetSize(thumbnailSizeForCell(size));
     resizeCells(m_galleryView);
     requestVisibleThumbnails();
 
@@ -975,9 +1024,13 @@ void MainWindow::onIconSizeChanged(int value)
         return;
 
     syncSlider(m_librarySizeSlider);
-    m_libraryThumbnailLoader->setTargetSize(size);
+    m_libraryThumbnailLoader->setTargetSize(thumbnailSizeForCell(size));
     resizeCells(m_libraryView);
     requestVisibleLibraryThumbnails();
+
+    // Remembered across restarts; the theme's size is only the first default.
+    QSettings settings;
+    settings.setValue(QStringLiteral("thumbnailSize"), value);
 }
 
 void MainWindow::startNewSearch()
@@ -1246,22 +1299,7 @@ void MainWindow::onThumbnailReady(int row, QPixmap pixmap)
 
 void MainWindow::requestVisibleThumbnails()
 {
-    const QRect viewportRect = m_galleryView->viewport()->rect();
-    const int rowCount = m_model->rowCount();
-
-    for (int row = 0; row < rowCount; ++row) {
-        const QModelIndex idx = m_model->index(row);
-        if (idx.data(GalleryModel::ThumbnailRequestedRole).toBool())
-            continue;
-
-        const QRect cellRect = m_galleryView->visualRect(idx);
-        if (!cellRect.intersects(viewportRect))
-            continue;
-
-        const Post &post = m_model->postAt(row);
-        m_model->markThumbnailRequested(row);
-        m_thumbnailLoader->request(row, QUrl(post.previewUrl));
-    }
+    requestVisibleRows(m_galleryView, m_model, m_thumbnailLoader);
 }
 
 void MainWindow::maybeAutoLoadNextPage()
@@ -1412,6 +1450,12 @@ QString MainWindow::relocateLibrary(const QString &oldDir, const QString &newDir
     progress.setWindowModality(Qt::WindowModal);
     progress.setMinimumDuration(500);
 
+    // Path updates are written in batches: one transaction per file meant
+    // one disk sync per file. Batches stay small so that a crash mid-move
+    // leaves at most this many index entries behind the files on disk.
+    constexpr int kPathBatchSize = 100;
+    QVector<QPair<QString, QString>> pendingPaths;
+
     int moved = 0;
     int skipped = 0;
     for (int i = 0; i < posts.size(); ++i) {
@@ -1430,9 +1474,14 @@ QString MainWindow::relocateLibrary(const QString &oldDir, const QString &newDir
         const QString oldSidecar = DownloadManager::sidecarPathFor(oldPath);
         if (QFile::exists(oldSidecar))
             moveFile(oldSidecar, DownloadManager::sidecarPathFor(newPath));
-        m_library->updatePostPath(oldPath, newPath);
+        pendingPaths.append({oldPath, newPath});
+        if (pendingPaths.size() >= kPathBatchSize) {
+            m_library->updatePostPaths(pendingPaths);
+            pendingPaths.clear();
+        }
         ++moved;
     }
+    m_library->updatePostPaths(pendingPaths);
     progress.setValue(posts.size());
 
     return skipped == 0
@@ -2049,12 +2098,15 @@ void MainWindow::deleteCurrentLibraryFolder()
             ++skipped; // leave it behind rather than clobber/lose it silently
             continue;
         }
-        if (!QFile::rename(oldPath, newPath))
+        // moveFile(): a subfolder can be a different mount than the root.
+        if (!moveFile(oldPath, newPath)) {
+            ++skipped; // counted, so the message below does not overstate
             continue;
+        }
 
         const QString oldSidecar = DownloadManager::sidecarPathFor(oldPath);
         if (QFile::exists(oldSidecar))
-            QFile::rename(oldSidecar, DownloadManager::sidecarPathFor(newPath));
+            moveFile(oldSidecar, DownloadManager::sidecarPathFor(newPath));
         if (m_library)
             m_library->updatePostPath(oldPath, newPath);
     }
@@ -2126,14 +2178,15 @@ void MainWindow::moveSelectedLibraryItems(const QString &targetFolderName)
             ++skipped; // don't clobber an existing file with the same name
             continue;
         }
-        if (!QFile::rename(post.localFilePath, newPath)) {
+        // moveFile(): the target folder can be a different mount.
+        if (!moveFile(post.localFilePath, newPath)) {
             ++skipped;
             continue;
         }
 
         const QString oldSidecar = DownloadManager::sidecarPathFor(post.localFilePath);
         if (QFile::exists(oldSidecar))
-            QFile::rename(oldSidecar, DownloadManager::sidecarPathFor(newPath));
+            moveFile(oldSidecar, DownloadManager::sidecarPathFor(newPath));
 
         if (m_library)
             m_library->updatePostPath(post.localFilePath, newPath);
@@ -2144,7 +2197,7 @@ void MainWindow::moveSelectedLibraryItems(const QString &targetFolderName)
     searchLibrary();
 
     m_libraryStatusLabel->setText(skipped > 0
-        ? tr("Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu).").arg(moved).arg(skipped)
+        ? tr("Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu albo błąd zapisu).").arg(moved).arg(skipped)
         : tr("Przeniesiono %1 plik(ów).").arg(moved));
 }
 
@@ -2156,22 +2209,7 @@ void MainWindow::onLibraryThumbnailReady(int row, QPixmap pixmap)
 
 void MainWindow::requestVisibleLibraryThumbnails()
 {
-    const QRect viewportRect = m_libraryView->viewport()->rect();
-    const int rowCount = m_libraryModel->rowCount();
-
-    for (int row = 0; row < rowCount; ++row) {
-        const QModelIndex idx = m_libraryModel->index(row);
-        if (idx.data(GalleryModel::ThumbnailRequestedRole).toBool())
-            continue;
-
-        const QRect cellRect = m_libraryView->visualRect(idx);
-        if (!cellRect.intersects(viewportRect))
-            continue;
-
-        const Post &post = m_libraryModel->postAt(row);
-        m_libraryModel->markThumbnailRequested(row);
-        m_libraryThumbnailLoader->request(row, QUrl(post.previewUrl));
-    }
+    requestVisibleRows(m_libraryView, m_libraryModel, m_libraryThumbnailLoader);
 }
 
 void MainWindow::onLibraryClicked(const QModelIndex &index)
@@ -2278,14 +2316,20 @@ void MainWindow::deleteSelectedLibraryItems()
         return;
 
     QList<int> rows;
+    int failed = 0;
     for (const QModelIndex &idx : selected) {
         const Post &post = m_libraryModel->postAt(idx.row());
         if (!post.localFilePath.isEmpty()) {
             // Only the actual disk write is allow-list-gated - a stale/orphaned
             // DB row (file already gone, or outside the allow-list) must still
             // be removable, since that's just our own index, not a filesystem write.
-            if (FolderAccessGuard::isAllowed(post.localFilePath)) {
-                QFile::remove(post.localFilePath);
+            if (FolderAccessGuard::isAllowed(post.localFilePath) && QFile::exists(post.localFilePath)) {
+                // A file that stays on disk keeps its row: dropping only the
+                // index entry would hide a file the user believes is gone.
+                if (!QFile::remove(post.localFilePath)) {
+                    ++failed;
+                    continue;
+                }
                 QFile::remove(DownloadManager::sidecarPathFor(post.localFilePath));
             }
             if (m_library)
@@ -2300,8 +2344,11 @@ void MainWindow::deleteSelectedLibraryItems()
     m_libraryThumbnailLoader->cancelAll();
     m_libraryModel->resetMissingThumbnails();
     requestVisibleLibraryThumbnails();
-    m_libraryStatusLabel->setText(tr("Usunięto %1 plik(ów) (%2 wszystkich w bibliotece).")
-        .arg(rows.size()).arg(m_library ? m_library->count() : 0));
+    QString status = tr("Usunięto %1 plik(ów) (%2 wszystkich w bibliotece).")
+        .arg(rows.size()).arg(m_library ? m_library->count() : 0);
+    if (failed > 0)
+        status += QLatin1Char(' ') + tr("%1 nie dało się usunąć (brak uprawnień?).").arg(failed);
+    m_libraryStatusLabel->setText(status);
     m_detailsPanel->clear();
 }
 

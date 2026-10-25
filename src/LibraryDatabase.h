@@ -11,6 +11,7 @@
 #include <QString>
 #include <QVector>
 #include <QStringList>
+#include <QPair>
 #include "Post.h"
 
 // SQLite-backed local library: downloaded posts, searchable by tag.
@@ -49,6 +50,8 @@ public:
 
     // Leaves tags/rating/etc. untouched; only the path changes.
     void updatePostPath(const QString &oldPath, const QString &newPath);
+    // Same for many posts at once, in one transaction. Pairs are (old, new).
+    void updatePostPaths(const QVector<QPair<QString, QString>> &moves);
 
 private:
     void ensureSchema();

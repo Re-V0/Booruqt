@@ -286,6 +286,11 @@
 <context>
     <name>MainWindow</name>
     <message>
+        <location filename="../src/MainWindow.cpp" line="2350"/>
+        <source>%1 nie dało się usunąć (brak uprawnień?).</source>
+        <translation>%1 kunne ikke slettes (mangler tilladelse?).</translation>
+    </message>
+    <message>
         <location filename="../src/MainWindow.cpp" line="124"/>
         <source>...</source>
         <translation>...</translation>
@@ -655,8 +660,8 @@
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="2142"/>
-        <source>Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu).</source>
-        <translation>Flyttede %1 fil(er), %2 sprunget over (der findes allerede en fil med det navn der).</translation>
+        <source>Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu albo błąd zapisu).</source>
+        <translation>Flyttede %1 fil(er), %2 sprunget over (der findes allerede en fil med det navn der, eller en skrivefejl).</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="2143"/>

@@ -55,9 +55,14 @@ QJsonDocument PythonPluginSource::runPlugin(const QString &mode, const QJsonObje
     process.write(QJsonDocument(stdinJson).toJson(QJsonDocument::Compact));
     process.closeWriteChannel();
 
-    if (!process.waitForFinished(10000)) {
-        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: %2 timed out after 10s")
-            .arg(m_name, mode));
+    // build_request may talk to the network itself (Newgrounds solves a
+    // proof-of-work challenge there), so it gets far longer than parsing,
+    // which only reads the body it is given. All of this runs off the GUI
+    // thread, so a long wait freezes nothing.
+    const int timeoutMs = mode == QStringLiteral("build_request") ? 60000 : 10000;
+    if (!process.waitForFinished(timeoutMs)) {
+        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: %2 timed out after %3s")
+            .arg(m_name, mode).arg(timeoutMs / 1000));
         process.kill();
         process.waitForFinished();
         return {};
@@ -82,11 +87,13 @@ QJsonDocument PythonPluginSource::runPlugin(const QString &mode, const QJsonObje
 
 bool PythonPluginSource::supportsTagExclusion() const
 {
-    if (m_exclusionSupport < 0) {
+    int support = m_exclusionSupport.load();
+    if (support < 0) {
         const QJsonObject caps = runPlugin(QStringLiteral("capabilities"), QJsonObject()).object();
-        m_exclusionSupport = caps.value(QStringLiteral("supports_tag_exclusion")).toBool() ? 1 : 0;
+        support = caps.value(QStringLiteral("supports_tag_exclusion")).toBool() ? 1 : 0;
+        m_exclusionSupport.store(support);
     }
-    return m_exclusionSupport == 1;
+    return support == 1;
 }
 
 QNetworkRequest PythonPluginSource::buildSearchRequest(const QString &tags, int page, int perPage) const

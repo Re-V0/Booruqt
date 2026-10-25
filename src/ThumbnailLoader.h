@@ -20,7 +20,9 @@ class QNetworkReply;
 class ThumbnailLoader : public QObject {
     Q_OBJECT
 public:
-    explicit ThumbnailLoader(QObject *parent = nullptr);
+    // useDiskCache: keep remote thumbnails on disk. Off for local files,
+    // which are already on disk.
+    explicit ThumbnailLoader(QObject *parent = nullptr, bool useDiskCache = true);
 
     void setTargetSize(const QSize &size) { m_targetSize = size; }
     QSize targetSize() const { return m_targetSize; }

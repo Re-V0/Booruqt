@@ -10,6 +10,7 @@
 #include "ISource.h"
 
 // Philomena flavor (Derpibooru, Ponybooru, Furbooru); tags are comma-joined.
+// Its tags contain spaces; inside the app they are written with "_" instead.
 class PhilomenaSource : public ISource {
 public:
     PhilomenaSource(QString name, QString baseUrl);

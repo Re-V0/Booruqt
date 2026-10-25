@@ -24,8 +24,13 @@ before serving real content:
         if leading_zero_bits(digest) >= challenge["bits"]:
             submit nonce to /_guard/api/v1/verify
 
-A verified solve lets the same IP through for about 180 seconds, so
-build_search_request() solves once per search and returns a plain URL.
+A verified solve lets the same IP through for about 180 seconds.
+build_search_request() records when it last solved one (a small file in the
+system temp folder) and solves again only after 150 seconds, so quick
+successive searches skip the wait.
+
+Time budget: the app gives build_search_request() 60 seconds in total. The
+network calls get 10 s each and the proof-of-work 30 s, which stays below it.
 
 Limitations:
 - Full-text search (terms=...), not real tag search.
@@ -33,7 +38,9 @@ Limitations:
 - file_url is the large listing thumbnail, not guaranteed original size.
 """
 import base64
+import os
 import re
+import tempfile
 import time
 
 import requests
@@ -41,6 +48,12 @@ from argon2.low_level import Type, hash_secret_raw
 
 BASE = "https://www.newgrounds.com"
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
+
+NETWORK_TIMEOUT_S = 10
+POW_TIMEOUT_S = 30
+# The server grants about 180 s; re-solve a little earlier to be safe.
+SOLVE_VALID_S = 150
+SOLVE_STAMP_PATH = os.path.join(tempfile.gettempdir(), "blairqt_ng_guard_solved")
 
 _ITEM_RE = re.compile(
     r'<a href="(?P<href>https://www\.newgrounds\.com/art/view/(?P<artist>[^/"]+)/(?P<slug>[^/"?]+))"'
@@ -76,7 +89,7 @@ def _solve_ng_guard():
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT})
 
-    challenge = session.get(f"{BASE}/_guard/api/v1/challenge", timeout=15).json()
+    challenge = session.get(f"{BASE}/_guard/api/v1/challenge", timeout=NETWORK_TIMEOUT_S).json()
     payload_raw = _b64url_decode(challenge["payload"])
     params = challenge["params"]
     bits = challenge["bits"]
@@ -97,11 +110,11 @@ def _solve_ng_guard():
         if _leading_zero_bits(digest) >= bits:
             break
         nonce += 1
-        if time.time() - start > 10:
-            raise RuntimeError("NG Guard proof-of-work timed out after 10s")
+        if time.time() - start > POW_TIMEOUT_S:
+            raise RuntimeError(f"NG Guard proof-of-work timed out after {POW_TIMEOUT_S}s")
 
     solve_time_ms = int((time.time() - start) * 1000)
-    session.post(
+    response = session.post(
         f"{BASE}/_guard/api/v1/verify",
         json={
             "algo": challenge["algo"],
@@ -113,12 +126,32 @@ def _solve_ng_guard():
             "sig": challenge["sig"],
             "solveTimeMs": solve_time_ms,
         },
-        timeout=15,
+        timeout=NETWORK_TIMEOUT_S,
     )
+    response.raise_for_status()
+
+
+def _last_solve_time():
+    """Unix time of the last verified solve, or 0 if there is none."""
+    try:
+        with open(SOLVE_STAMP_PATH, "r") as stamp:
+            return float(stamp.read().strip())
+    except (OSError, ValueError):
+        return 0.0
+
+
+def _record_solve_time():
+    try:
+        with open(SOLVE_STAMP_PATH, "w") as stamp:
+            stamp.write(str(time.time()))
+    except OSError:
+        pass  # only an optimisation; the next search simply solves again
 
 
 def build_search_request(base_url, tags, page, per_page):
-    _solve_ng_guard()
+    if time.time() - _last_solve_time() > SOLVE_VALID_S:
+        _solve_ng_guard()
+        _record_solve_time()
 
     terms = tags.strip() or "art"  # empty query = 400 on Newgrounds' search
     url = f"{base_url}/search/conduct/art?terms={requests.utils.quote(terms)}&page={max(page, 1)}"

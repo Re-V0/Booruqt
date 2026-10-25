@@ -60,6 +60,8 @@ private:
     QString hintForIndex(int index) const;
     // Clears a previous successful test on any relevant edit.
     void invalidateDetectedFlavor();
+    // Locks the fields a probe reads while a test runs.
+    void setInputsEnabled(bool enabled);
 
     QComboBox *m_presetCombo;
     QLabel *m_presetHintLabel;

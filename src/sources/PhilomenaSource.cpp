@@ -16,6 +16,27 @@
 #include <QJsonObject>
 #include <QStringList>
 
+namespace {
+
+// The API's own limit; a larger per_page is not honoured.
+constexpr int kMaxPerPage = 50;
+
+// Philomena tags contain spaces ("twilight sparkle"), while the rest of the
+// app separates tags with spaces. At the API boundary "_" stands for a
+// space: shown and typed as twilight_sparkle, sent as "twilight sparkle".
+// A Philomena tag with a real "_" in it cannot be expressed; those are rare.
+QString tagFromApi(const QString &tag)
+{
+    return QString(tag).replace(QLatin1Char(' '), QLatin1Char('_'));
+}
+
+QString tagToApi(const QString &tag)
+{
+    return QString(tag).replace(QLatin1Char('_'), QLatin1Char(' '));
+}
+
+} // namespace
+
 PhilomenaSource::PhilomenaSource(QString name, QString baseUrl)
     : m_name(std::move(name)), m_baseUrl(std::move(baseUrl))
 {
@@ -25,12 +46,14 @@ QNetworkRequest PhilomenaSource::buildSearchRequest(const QString &tags, int pag
 {
     QUrl url(m_baseUrl + QStringLiteral("/api/v1/json/search/images"));
     QUrlQuery query;
-    const QString commaTags = QString(tags)
-        .split(QLatin1Char(' '), Qt::SkipEmptyParts)
-        .join(QStringLiteral(", "));
+    QStringList apiTags;
+    for (const QString &tag : tags.split(QLatin1Char(' '), Qt::SkipEmptyParts))
+        apiTags.append(tagToApi(tag));
+    const QString commaTags = apiTags.join(QStringLiteral(", "));
     query.addQueryItem(QStringLiteral("q"), commaTags.isEmpty() ? QStringLiteral("*") : commaTags);
     query.addQueryItem(QStringLiteral("page"), QString::number(page));
-    query.addQueryItem(QStringLiteral("per_page"), QString::number(perPage));
+    // Page-based paging, so a capped page size stays consistent across pages.
+    query.addQueryItem(QStringLiteral("per_page"), QString::number(qMin(perPage, kMaxPerPage)));
     url.setQuery(query);
 
     QNetworkRequest req(url);
@@ -52,7 +75,7 @@ QVector<Post> PhilomenaSource::parseSearchResponse(const QByteArray &data) const
         p.id = QString::number(o.value(QStringLiteral("id")).toInt());
         p.sourceName = m_name;
         for (const QJsonValue &t : o.value(QStringLiteral("tags")).toArray())
-            p.tags.append(t.toString());
+            p.tags.append(tagFromApi(t.toString()));
         p.score = o.value(QStringLiteral("score")).toInt();
         p.width = o.value(QStringLiteral("width")).toInt();
         p.height = o.value(QStringLiteral("height")).toInt();
@@ -90,7 +113,7 @@ QNetworkRequest PhilomenaSource::buildTagSuggestRequest(const QString &prefix) c
 {
     QUrl url(m_baseUrl + QStringLiteral("/api/v1/json/search/tags"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("q"), prefix + QLatin1Char('*'));
+    query.addQueryItem(QStringLiteral("q"), tagToApi(prefix) + QLatin1Char('*'));
     query.addQueryItem(QStringLiteral("per_page"), QStringLiteral("10"));
     url.setQuery(query);
 
@@ -106,7 +129,7 @@ QStringList PhilomenaSource::parseTagSuggestions(const QByteArray &data) const
     for (const QJsonValue &v : arr) {
         const QString name = v.toObject().value(QStringLiteral("name")).toString();
         if (!name.isEmpty())
-            tags.append(name);
+            tags.append(tagFromApi(name));
     }
     return tags;
 }

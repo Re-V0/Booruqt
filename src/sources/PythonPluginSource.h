@@ -10,6 +10,7 @@
 #include "ISource.h"
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <atomic>
 
 // "python" flavor: runs a user script as a subprocess. Contract:
 //   def build_search_request(base_url, tags, page, per_page) -> dict
@@ -43,5 +44,7 @@ private:
     QString m_baseUrl;
     QString m_scriptPath;
     // -1 not asked yet, 0 no, 1 yes.
-    mutable int m_exclusionSupport = -1;
+    // Atomic: two overlapping searches ask from two worker threads. Both may
+    // run the script once; neither can see a torn value.
+    mutable std::atomic<int> m_exclusionSupport{-1};
 };

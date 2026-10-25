@@ -17,14 +17,18 @@
 #include <QFutureWatcher>
 #include <QImage>
 
-ThumbnailLoader::ThumbnailLoader(QObject *parent)
+ThumbnailLoader::ThumbnailLoader(QObject *parent, bool useDiskCache)
     : QObject(parent), m_manager(new QNetworkAccessManager(this))
 {
-    auto *cache = new QNetworkDiskCache(this);
-    const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
-        + QStringLiteral("/blairqt/thumbnails");
-    cache->setCacheDirectory(cacheDir);
-    m_manager->setCache(cache);
+    // One cache directory must have one QNetworkDiskCache, or two instances
+    // expire and overwrite each other's entries.
+    if (useDiskCache) {
+        auto *cache = new QNetworkDiskCache(this);
+        const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
+            + QStringLiteral("/blairqt/thumbnails");
+        cache->setCacheDirectory(cacheDir);
+        m_manager->setCache(cache);
+    }
 
     connect(m_manager, &QNetworkAccessManager::finished, this, &ThumbnailLoader::onReplyFinished);
 }

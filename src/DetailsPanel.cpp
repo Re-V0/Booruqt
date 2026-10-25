@@ -28,6 +28,8 @@ DetailsPanel::DetailsPanel(QWidget *parent)
     m_tagsLabel = new QLabel(this);
     m_tagsLabel->setWordWrap(true);
     m_tagsLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    // Tags come from the site: plain text, never guessed to be HTML.
+    m_tagsLabel->setTextFormat(Qt::PlainText);
     m_tagsLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
 
     m_zoomButton = new QPushButton(tr("Powiększ"), this);
@@ -85,11 +87,13 @@ void DetailsPanel::showPost(const Post &post, const QPixmap &preview)
         m_previewLabel->setText(tr("(brak podglądu)"));
     }
 
+    // The label is rich text; values from a site or a plugin are escaped so
+    // a "<" in them is shown, not parsed as markup.
     m_infoLabel->setText(tr("<b>%1</b> #%2<br>%3x%4 &middot; ocena: %5 &middot; rating: %6")
-        .arg(post.sourceName, post.id)
+        .arg(post.sourceName.toHtmlEscaped(), post.id.toHtmlEscaped())
         .arg(post.width).arg(post.height)
         .arg(post.score)
-        .arg(post.rating.isEmpty() ? tr("?") : post.rating));
+        .arg(post.rating.isEmpty() ? tr("?") : post.rating.toHtmlEscaped()));
 
     m_tagsLabel->setText(post.tags.isEmpty() ? tr("(brak tagów)") : post.tags.join(QStringLiteral(", ")));
 

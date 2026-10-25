@@ -8,6 +8,7 @@
 #include "SourceManager.h"
 
 #include <QFile>
+#include <QSaveFile>
 #include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -69,7 +70,7 @@ QStringList SourceManager::knownFlavors()
     };
 }
 
-void SourceManager::loadDefaults()
+void SourceManager::loadDefaults(const QString &onlyName)
 {
     QFile file(QStringLiteral(":/sources.json"));
     if (!file.open(QIODevice::ReadOnly)) {
@@ -91,6 +92,8 @@ void SourceManager::loadDefaults()
         if (name.isEmpty() || flavor.isEmpty() || baseUrl.isEmpty())
             continue;
         if (m_hiddenBuiltinNames.contains(name))
+            continue;
+        if (!onlyName.isEmpty() && name != onlyName)
             continue;
 
         const QString apiKey = o.value(QStringLiteral("apiKey")).toString();
@@ -163,16 +166,38 @@ void SourceManager::upsertSource(const QSharedPointer<ISource> &source)
     m_sources.append(source);
 }
 
-void SourceManager::saveUserSources() const
+// QSaveFile: the old file stays intact until the new one is complete, so a
+// crash mid-write cannot leave a truncated list that loses every source.
+// ownerOnly: QSaveFile keeps the permissions of an existing target, so the
+// target is created empty with 0600 first; nothing secret is in it yet.
+static void writeJsonAtomically(const QString &path, const QJsonDocument &doc, bool ownerOnly)
 {
-    QFile file(userSourcesFilePath());
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qWarning() << "SourceManager: could not write" << file.fileName();
+    const QFileDevice::Permissions privatePermissions = QFileDevice::ReadOwner | QFileDevice::WriteOwner;
+    if (ownerOnly && !QFile::exists(path)) {
+        QFile create(path);
+        if (create.open(QIODevice::WriteOnly))
+            create.setPermissions(privatePermissions);
+    }
+
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "SourceManager: could not write" << path;
         return;
     }
-    file.write(QJsonDocument(m_userSourcesJson).toJson());
+    file.write(doc.toJson());
+    if (!file.commit()) {
+        qWarning() << "SourceManager: could not write" << path << file.errorString();
+        return;
+    }
+    // Also tightens a file written by an older version.
+    if (ownerOnly)
+        QFile::setPermissions(path, privatePermissions);
+}
+
+void SourceManager::saveUserSources() const
+{
     // Holds API keys and session cookies.
-    file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    writeJsonAtomically(userSourcesFilePath(), QJsonDocument(m_userSourcesJson), /*ownerOnly=*/true);
 }
 
 void SourceManager::addCustomSource(const QString &name, const QString &flavor, const QString &baseUrl,
@@ -241,15 +266,10 @@ void SourceManager::loadHiddenNames()
 
 void SourceManager::saveHiddenNames() const
 {
-    QFile file(hiddenSourcesFilePath());
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qWarning() << "SourceManager: could not write" << file.fileName();
-        return;
-    }
     QJsonArray arr;
     for (const QString &name : m_hiddenBuiltinNames)
         arr.append(name);
-    file.write(QJsonDocument(arr).toJson());
+    writeJsonAtomically(hiddenSourcesFilePath(), QJsonDocument(arr), /*ownerOnly=*/false);
 }
 
 int SourceManager::indexOfUserSourceJson(const QString &name) const
@@ -283,6 +303,11 @@ void SourceManager::removeSource(const QString &name)
             break;
         }
     }
+
+    // A custom source may have replaced a built-in of the same name. With the
+    // custom one gone, the built-in comes back now, not only after a restart.
+    if (wasCustom)
+        loadDefaults(name);
 }
 
 void SourceManager::restoreDefaultSources()

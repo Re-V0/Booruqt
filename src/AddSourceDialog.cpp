@@ -167,9 +167,31 @@ AddSourceDialog::AddSourceDialog(QWidget *parent)
     connect(m_buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
+    // Everything the probe request is built from; a change after a passed
+    // test would otherwise be saved untested. The name is not among them.
     connect(m_urlEdit, &QLineEdit::textEdited, this, &AddSourceDialog::invalidateDetectedFlavor);
+    connect(m_apiKeyEdit, &QLineEdit::textEdited, this, &AddSourceDialog::invalidateDetectedFlavor);
+    connect(m_userIdEdit, &QLineEdit::textEdited, this, &AddSourceDialog::invalidateDetectedFlavor);
+    connect(m_cookieEdit, &QLineEdit::textEdited, this, &AddSourceDialog::invalidateDetectedFlavor);
+    connect(m_userAgentEdit, &QLineEdit::textEdited, this, &AddSourceDialog::invalidateDetectedFlavor);
     connect(m_flavorCombo, &QComboBox::currentTextChanged, this, &AddSourceDialog::invalidateDetectedFlavor);
     connect(m_presetCombo, &QComboBox::currentIndexChanged, this, &AddSourceDialog::applyPreset);
+}
+
+void AddSourceDialog::setInputsEnabled(bool enabled)
+{
+    // Locked while a test runs: each probe reads the fields again, so an edit
+    // mid-test would mix two configurations into one result.
+    m_presetCombo->setEnabled(enabled);
+    m_urlEdit->setEnabled(enabled);
+    m_flavorCombo->setEnabled(enabled && !m_htmlBridgeCheck->isChecked());
+    m_apiKeyEdit->setEnabled(enabled);
+    m_userIdEdit->setEnabled(enabled);
+    m_cookieEdit->setEnabled(enabled);
+    m_userAgentEdit->setEnabled(enabled);
+    m_htmlBridgeCheck->setEnabled(enabled);
+    m_scriptPathBrowseButton->setEnabled(enabled);
+    m_testButton->setEnabled(enabled);
 }
 
 void AddSourceDialog::invalidateDetectedFlavor()
@@ -281,7 +303,7 @@ void AddSourceDialog::startTest()
     m_tryIndex = 0;
     m_probePass = 0;
 
-    m_testButton->setEnabled(false);
+    setInputsEnabled(false);
     m_resultLabel->setText(tr("Testowanie..."));
     tryNextFlavor();
 }
@@ -294,7 +316,7 @@ void AddSourceDialog::tryNextFlavor()
             m_tryIndex = 0;
             m_logEdit->appendPlainText(QStringLiteral("(empty query didn't work anywhere - retrying with tag \"%1\")").arg(probeTags().at(m_probePass)));
         } else {
-            m_testButton->setEnabled(true);
+            setInputsEnabled(true);
             m_resultLabel->setText(m_flavorsToTry == QStringList{QStringLiteral("python")}
                 ? tr("Skrypt pluginu nie zadziałał - sprawdź log poniżej.")
                 : tr("Żaden znany mechanizm nie zadziałał pod tym adresem. Sprawdź URL "
@@ -400,7 +422,7 @@ void AddSourceDialog::handleProbeResult(const QString &flavor, int httpStatus, c
 
     if (!posts.isEmpty()) {
         m_detectedFlavor = flavor;
-        m_testButton->setEnabled(true);
+        setInputsEnabled(true);
         m_resultLabel->setText(tr("Wykryto mechanizm: %1 - test OK (%2 postów).")
                                    .arg(m_detectedFlavor).arg(posts.size()));
         m_buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);

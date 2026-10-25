@@ -11,6 +11,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
+#include <QSaveFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -67,9 +68,13 @@ QJsonObject readRoot()
 
 void writeRoot(const QJsonObject &root)
 {
-    QFile file(ThemeManager::configFilePath());
-    if (file.open(QIODevice::WriteOnly))
-        file.write(QJsonDocument(root).toJson());
+    // QSaveFile: a crash mid-write keeps the old theme instead of an empty
+    // file that would silently reset it.
+    QSaveFile file(ThemeManager::configFilePath());
+    if (!file.open(QIODevice::WriteOnly))
+        return;
+    file.write(QJsonDocument(root).toJson());
+    file.commit();
 }
 
 // The palette the platform gave us, captured before the first theme is

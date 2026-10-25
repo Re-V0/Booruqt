@@ -286,6 +286,11 @@
 <context>
     <name>MainWindow</name>
     <message>
+        <location filename="../src/MainWindow.cpp" line="2350"/>
+        <source>%1 nie dało się usunąć (brak uprawnień?).</source>
+        <translation>Не удалось удалить: %1 (нет прав?).</translation>
+    </message>
+    <message>
         <location filename="../src/MainWindow.cpp" line="124"/>
         <source>...</source>
         <translation>...</translation>
@@ -655,8 +660,8 @@
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="2142"/>
-        <source>Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu).</source>
-        <translation>Перемещено файлов: %1, пропущено: %2 (файл с таким именем там уже существует).</translation>
+        <source>Przeniesiono %1 plik(ów), %2 pominiętych (plik już istnieje w celu albo błąd zapisu).</source>
+        <translation>Перемещено файлов: %1, пропущено: %2 (файл с таким именем там уже существует или ошибка записи).</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="2143"/>

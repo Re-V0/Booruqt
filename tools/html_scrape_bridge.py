@@ -10,7 +10,10 @@
 
 B.LAIR_QT talks to this over HTTP when a source has "This site has no API
 (dapi)" checked. It walks the site's HTML post listing with cloudscraper and
-resolves each sampled post's full image URL from its detail page.
+returns the posts in listing order, each with the listing's thumbnail. The
+full image URL needs one detail-page request per post, which these sites
+rate-limit, so only the first RESOLVE_CAP posts of a page get one; the rest
+show a thumbnail but cannot be downloaded from that page.
 
 Requirements:
     pip install flask cloudscraper beautifulsoup4
@@ -23,7 +26,6 @@ Tags, rating, score and size are not scraped and come back empty.
 """
 import html
 import logging
-import random
 import re
 import time
 from urllib.parse import quote
@@ -37,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-PAGE_STEP = 20  # posts per listing page on these engines
 MAX_PAGES_PER_REQUEST = 6
 RESOLVE_CAP = 15  # more detail-page fetches per request triggers 429s
 RESOLVE_DELAY_S = 0.4
@@ -70,17 +71,34 @@ def _absolutize(url: str, base_url: str) -> str:
     return url
 
 
+def _parse_listing(page_html: str, base_url: str):
+    """(post_id, thumbnail_url) for every post on a listing page, in order."""
+    soup = BeautifulSoup(page_html, "html.parser")
+    items = []
+    for link in soup.find_all("a", href=True):
+        match = re.search(r"s=view&id=(\d+)", html.unescape(link["href"]))
+        if match is None:
+            continue
+        image = link.find("img")
+        if image is None or not image.get("src"):
+            continue  # a text link to a post, not a thumbnail
+        items.append((match.group(1), _absolutize(image["src"], base_url)))
+    return items
+
+
 def scrape_gelbooru_html(base_url: str, tags: str, page: int, limit: int):
     scraper = _scraper()
     # Empty tags return nothing on these engines; "all" means everything.
     tag_string = quote(tags.strip()) if tags.strip() else "all"
-    post_ids = []
-    seen_ids = set()
 
-    # Each app page maps to a different block of listing pages.
-    start_block = max(0, page - 1) * MAX_PAGES_PER_REQUEST
-    for offset in range(MAX_PAGES_PER_REQUEST):
-        pid = (start_block + offset) * PAGE_STEP
+    # App page N shows listing posts (N-1)*limit ... N*limit-1. pid is the
+    # listing's offset in posts, so consecutive app pages never overlap.
+    pid = max(0, page - 1) * limit
+    posts = []
+    seen_ids = set()
+    for _ in range(MAX_PAGES_PER_REQUEST):
+        if len(posts) >= limit:
+            break
         url = f"{base_url}/index.php?page=post&s=list&tags={tag_string}&pid={pid}"
         try:
             resp = scraper.get(url, timeout=20)
@@ -91,50 +109,51 @@ def scrape_gelbooru_html(base_url: str, tags: str, page: int, limit: int):
             logger.warning("listing HTTP %s for %s", resp.status_code, url)
             break
 
-        # Links are HTML-escaped ("&amp;") in the raw markup.
-        content = html.unescape(resp.text)
-        new_ids = [i for i in re.findall(r"s=view&id=(\d+)", content) if i not in seen_ids]
-        if not new_ids:
-            break
-        for i in new_ids:
-            seen_ids.add(i)
-            post_ids.append(i)
-        if len(post_ids) >= limit:
-            break
+        items = _parse_listing(resp.text, base_url)
+        added = 0
+        for post_id, thumbnail_url in items:
+            if post_id in seen_ids:
+                continue
+            seen_ids.add(post_id)
+            posts.append((post_id, thumbnail_url))
+            added += 1
+        if added == 0:
+            break  # past the last page
+        pid += len(items)
 
-    if not post_ids:
-        return []
-
-    resolve_cap = min(len(post_ids), RESOLVE_CAP, limit)
-    sample_ids = random.sample(post_ids, resolve_cap) if len(post_ids) > resolve_cap else post_ids
+    posts = posts[:limit]
 
     results = []
-    for i, post_id in enumerate(sample_ids):
-        if i > 0:
-            time.sleep(RESOLVE_DELAY_S)
-        try:
-            resp = scraper.get(f"{base_url}/index.php?page=post&s=view&id={post_id}", timeout=15)
-            if resp.status_code == 429:
-                logger.warning("rate-limited (429), stopping resolves for this request")
-                break
-            if resp.status_code != 200:
-                continue
-            image_url = _extract_full_image_from_post_page(resp.text)
-            if not image_url:
-                continue
-            image_url = _absolutize(image_url, base_url)
-            results.append({
-                "id": post_id,
-                "file_url": image_url,
-                "preview_url": image_url,
-                "tags": "",
-                "rating": "",
-                "score": 0,
-                "width": 0,
-                "height": 0,
-            })
-        except Exception as e:
-            logger.debug("failed to resolve post %s: %s", post_id, e)
+    resolved = 0
+    rate_limited = False
+    for post_id, thumbnail_url in posts:
+        file_url = ""
+        if resolved < RESOLVE_CAP and not rate_limited:
+            if resolved > 0:
+                time.sleep(RESOLVE_DELAY_S)
+            resolved += 1
+            try:
+                resp = scraper.get(f"{base_url}/index.php?page=post&s=view&id={post_id}", timeout=15)
+                if resp.status_code == 429:
+                    logger.warning("rate-limited (429), not resolving more posts in this request")
+                    rate_limited = True
+                elif resp.status_code == 200:
+                    image_url = _extract_full_image_from_post_page(resp.text)
+                    if image_url:
+                        file_url = _absolutize(image_url, base_url)
+            except Exception as e:
+                logger.debug("failed to resolve post %s: %s", post_id, e)
+
+        results.append({
+            "id": post_id,
+            "file_url": file_url,
+            "preview_url": thumbnail_url,
+            "tags": "",
+            "rating": "",
+            "score": 0,
+            "width": 0,
+            "height": 0,
+        })
 
     return results
 

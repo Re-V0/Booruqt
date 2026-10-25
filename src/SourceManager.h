@@ -43,7 +43,8 @@ public:
     void restoreDefaultSources();
 
 private:
-    void loadDefaults();
+    // onlyName: load just the built-in with that name (if not hidden).
+    void loadDefaults(const QString &onlyName = {});
     void loadUserSources();
     void saveUserSources() const;
     void loadHiddenNames();

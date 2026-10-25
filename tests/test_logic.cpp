@@ -24,6 +24,7 @@
 #include "ThumbnailLoader.h"
 #include "ThemeManager.h"
 #include "DownloadManager.h"
+#include "SourceManager.h"
 
 #include <QApplication>
 #include <QTemporaryDir>
@@ -277,6 +278,29 @@ void testSources()
           philomena.parseTagSuggestions(philomenaSuggestions).join(QLatin1Char(',')),
           QStringLiteral("applejack,apple"));
 
+    // Philomena tags have spaces; the app separates tags with spaces. "_"
+    // stands for the space on our side, in both directions.
+    const QString multiWord = QString::fromLatin1(
+        philomena.buildSearchRequest(QStringLiteral("twilight_sparkle -princess_celestia"), 1, 5).url().toEncoded());
+    check("philomena sends multi-word tags with spaces",
+          multiWord.contains(QStringLiteral("q=twilight%20sparkle,%20-princess%20celestia")), multiWord);
+    const QByteArray philomenaPosts = R"JSON({"images":[{"id":5,"tags":["twilight sparkle","safe"],
+        "view_url":"https://x/f.png","representations":{"thumb":"https://x/t.png"}}]})JSON";
+    const QVector<Post> philomenaParsed = philomena.parseSearchResponse(philomenaPosts);
+    if (!philomenaParsed.isEmpty()) {
+        equal("philomena tags come back as one token each", philomenaParsed.first().tags.join(QLatin1Char(',')),
+              QStringLiteral("twilight_sparkle,safe"));
+        equal("philomena rating still found", philomenaParsed.first().rating, QStringLiteral("safe"));
+    } else {
+        check("philomena post parsed", false);
+    }
+    equal("philomena suggestions use _ for spaces",
+          philomena.parseTagSuggestions(R"JSON({"tags":[{"name":"twilight sparkle"}]})JSON").join(QLatin1Char(',')),
+          QStringLiteral("twilight_sparkle"));
+    const QString perPage = QString::fromLatin1(
+        philomena.buildSearchRequest(QStringLiteral("x"), 1, 200).url().toEncoded());
+    check("philomena page size capped at the API's 50", perPage.contains(QStringLiteral("per_page=50")), perPage);
+
     const QByteArray gelbooruPosts = R"JSON([{"id":1,"tags":"baldur&#039;s_gate_3 1girl",
         "file_url":"https://x/a.jpg","preview_url":"https://x/t.jpg"}])JSON";
     const QVector<Post> posts = gelbooru.parseSearchResponse(gelbooruPosts);
@@ -450,6 +474,60 @@ void testLibraryExactTags()
 
     db.removePost(root + QStringLiteral("/art/3.jpg"));
     check("removed post leaves no tags behind", db.suggestTags(QStringLiteral("red_d"), 10).isEmpty());
+}
+
+void testSourceManager()
+{
+    begin("Source list");
+    SourceManager manager;
+    QSharedPointer<ISource> builtin = manager.byName(QStringLiteral("Danbooru"));
+    check("built-in Danbooru present", builtin && builtin->flavor() == QStringLiteral("danbooru"));
+
+    // A custom source with a built-in's name replaces it...
+    manager.addCustomSource(QStringLiteral("Danbooru"), QStringLiteral("moebooru"),
+                            QStringLiteral("https://mirror.example"), QStringLiteral("secret-key"));
+    QSharedPointer<ISource> custom = manager.byName(QStringLiteral("Danbooru"));
+    check("custom source shadows the built-in", custom && custom->flavor() == QStringLiteral("moebooru"));
+
+#ifdef Q_OS_UNIX
+    const QString file = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+        + QStringLiteral("/custom_sources.json");
+    const QFileDevice::Permissions permissions = QFile::permissions(file);
+    check("file with API keys is owner-only",
+          !(permissions & (QFileDevice::ReadGroup | QFileDevice::ReadOther)),
+          QString::number(int(permissions), 16));
+#endif
+
+    // ...and removing it brings the built-in back at once, not after a restart.
+    manager.removeSource(QStringLiteral("Danbooru"));
+    QSharedPointer<ISource> restored = manager.byName(QStringLiteral("Danbooru"));
+    check("built-in back after removing the custom one",
+          restored && restored->flavor() == QStringLiteral("danbooru"));
+
+    SourceManager reloaded;
+    QSharedPointer<ISource> afterRestart = reloaded.byName(QStringLiteral("Danbooru"));
+    check("and still there after a restart", afterRestart && afterRestart->flavor() == QStringLiteral("danbooru"));
+}
+
+void testLibraryPathBatch()
+{
+    begin("Library path updates in one transaction");
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    LibraryDatabase db;
+    Post p;
+    p.sourceName = QStringLiteral("Batch");
+    p.tags = {QStringLiteral("batch_tag")};
+    QVector<QPair<QString, QString>> moves;
+    for (int i = 0; i < 5; ++i) {
+        p.id = QString::number(i);
+        const QString oldPath = QStringLiteral("/batch/old/%1.jpg").arg(i);
+        db.addOrUpdatePost(p, oldPath);
+        moves.append({oldPath, QStringLiteral("/batch/new/%1.jpg").arg(i)});
+    }
+    db.updatePostPaths(moves);
+    check("all paths moved", db.search(QString(), -1, 0, QStringLiteral("/batch/new")).size() == 5);
+    check("nothing left at the old paths", db.search(QString(), -1, 0, QStringLiteral("/batch/old")).isEmpty());
+    check("tags survive the move", db.search(QStringLiteral("batch_tag"), -1).size() == 5);
 }
 
 void testLibraryMigration()
@@ -985,7 +1063,9 @@ int main(int argc, char **argv)
     testPluginSource();
     testLibraryDatabase();
     testLibraryExactTags();
+    testLibraryPathBatch();
     testLibraryMigration();
+    testSourceManager();
     testThumbnailCancel();
     testDownloads();
     // Last: it changes the application palette.

@@ -415,3 +415,26 @@ void LibraryDatabase::updatePostPath(const QString &oldPath, const QString &newP
     if (!q.exec())
         qWarning() << "LibraryDatabase: update path failed:" << q.lastError().text();
 }
+
+void LibraryDatabase::updatePostPaths(const QVector<QPair<QString, QString>> &moves)
+{
+    if (!m_db.isOpen() || moves.isEmpty())
+        return;
+    if (!m_db.transaction()) {
+        qWarning() << "LibraryDatabase: could not start a transaction:" << m_db.lastError().text();
+        return;
+    }
+
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("UPDATE posts SET file_path = :new_path WHERE file_path = :old_path"));
+    for (const QPair<QString, QString> &move : moves) {
+        q.bindValue(QStringLiteral(":old_path"), move.first);
+        q.bindValue(QStringLiteral(":new_path"), move.second);
+        if (!q.exec()) {
+            qWarning() << "LibraryDatabase: update path failed:" << q.lastError().text();
+            m_db.rollback();
+            return;
+        }
+    }
+    m_db.commit();
+}
