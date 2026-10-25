@@ -29,7 +29,15 @@ sandbox plugins.
 
 ## Quickstart
 
-Arch Linux:
+Prebuilt packages for Arch Linux, Debian 13 and Ubuntu 24.04 are attached to
+each [release on GitHub](https://github.com/Re-V0/Booruqt/releases):
+
+```bash
+sudo pacman -U blairqt-0.3.1-1-x86_64.pkg.tar.zst      # Arch
+sudo apt install ./blairqt_0.3.1-debian13_amd64.deb     # Debian 13 (or -ubuntu24.04)
+```
+
+Arch Linux, from source:
 
 ```bash
 makepkg -si
@@ -39,8 +47,8 @@ Gentoo — drop the ebuild into a local overlay:
 
 ```bash
 mkdir -p /var/db/repos/local/media-gfx/blairqt
-cp blairqt-0.3.0.ebuild /var/db/repos/local/media-gfx/blairqt/
-ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-0.3.0.ebuild manifest
+cp blairqt-0.3.1.ebuild /var/db/repos/local/media-gfx/blairqt/
+ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-0.3.1.ebuild manifest
 emerge -av media-gfx/blairqt
 ```
 

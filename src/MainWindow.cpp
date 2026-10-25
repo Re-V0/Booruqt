@@ -985,13 +985,20 @@ void MainWindow::startNewSearch()
     if (m_selectedMergeSources.isEmpty())
         return;
 
-    for (QNetworkReply *reply : std::as_const(m_pendingReplies))
-        reply->abort();
-    m_pendingReplies.clear();
-    m_thumbnailLoader->cancelAll();
-
+    // issueSearchRequest() drops the previous round's replies and thumbnails.
     m_currentTags = m_tagsEdit->text().trimmed();
     issueSearchRequest(1, /*append=*/false);
+}
+
+void MainWindow::abortPendingSearchReplies()
+{
+    // abort() emits finished() synchronously, and onSearchReplyFinished()
+    // removes the reply from m_pendingReplies. Iterating the set while that
+    // happens is undefined and skips replies, so: copy, clear, then abort.
+    const QSet<QNetworkReply *> replies = m_pendingReplies;
+    m_pendingReplies.clear();
+    for (QNetworkReply *reply : replies)
+        reply->abort();
 }
 
 void MainWindow::loadNextPage()
@@ -1030,9 +1037,7 @@ void MainWindow::issueSearchRequest(int page, bool append)
         return;
     }
 
-    for (QNetworkReply *reply : std::as_const(m_pendingReplies))
-        reply->abort();
-    m_pendingReplies.clear();
+    abortPendingSearchReplies();
 
     if (!append) {
         // Row indices are about to be reused; drop in-flight thumbnails.
@@ -1110,7 +1115,7 @@ void MainWindow::sendSearchRequest(const QSharedPointer<ISource> &source, QNetwo
     }
 
     request.setTransferTimeout(kSearchTimeoutMs);
-    NetworkLog::instance().log(QStringLiteral("GET %1").arg(request.url().toString()));
+    NetworkLog::instance().log(QStringLiteral("GET %1").arg(NetworkLog::redactedUrl(request.url())));
 
     QNetworkReply *reply = m_network->get(request);
     m_pendingReplies.insert(reply);
@@ -2290,6 +2295,11 @@ void MainWindow::deleteSelectedLibraryItems()
     }
 
     m_libraryModel->removeRows(rows);
+    // Pending thumbnails are keyed by row, and removeRows() just shifted the
+    // rows: drop them and request again for the new positions.
+    m_libraryThumbnailLoader->cancelAll();
+    m_libraryModel->resetMissingThumbnails();
+    requestVisibleLibraryThumbnails();
     m_libraryStatusLabel->setText(tr("Usunięto %1 plik(ów) (%2 wszystkich w bibliotece).")
         .arg(rows.size()).arg(m_library ? m_library->count() : 0));
     m_detailsPanel->clear();

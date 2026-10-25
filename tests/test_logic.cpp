@@ -20,6 +20,9 @@
 #include "sources/PhilomenaSource.h"
 #include "sources/SzurubooruSource.h"
 #include "sources/PythonPluginSource.h"
+#include "NetworkLog.h"
+#include "ThumbnailLoader.h"
+#include "ThemeManager.h"
 
 #include <QApplication>
 #include <QTemporaryDir>
@@ -31,6 +34,11 @@
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QElapsedTimer>
+#include <QTcpServer>
+#include <QTcpSocket>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QPalette>
 #include <iostream>
 
 namespace {
@@ -81,6 +89,30 @@ void testHtmlEntities()
           QStringLiteral("bad&entity; &#;"));
     equal("out-of-range rejected", decodeHtmlEntities(QStringLiteral("&#999999999999;")),
           QStringLiteral("&#999999999999;"));
+
+    // Above U+FFFF a code point is two UTF-16 units; QChar(code) used to
+    // truncate it (or assert in a debug build).
+    const char32_t grinning = 0x1F600;
+    equal("emoji above the BMP", decodeHtmlEntities(QStringLiteral("smile_&#128512;")),
+          QStringLiteral("smile_") + QString::fromUcs4(&grinning, 1));
+    equal("hex emoji above the BMP", decodeHtmlEntities(QStringLiteral("&#x1F600;")),
+          QString::fromUcs4(&grinning, 1));
+    equal("lone surrogate rejected", decodeHtmlEntities(QStringLiteral("&#55357;")),
+          QStringLiteral("&#55357;"));
+}
+
+void testNetworkLogRedaction()
+{
+    begin("Network log hides credentials");
+    const QUrl url(QStringLiteral(
+        "https://gelbooru.com/index.php?page=dapi&tags=1girl&api_key=SECRET123&user_id=4242"));
+    const QString shown = NetworkLog::redactedUrl(url);
+    check("api_key value hidden", !shown.contains(QStringLiteral("SECRET123")), shown);
+    check("user_id value hidden", !shown.contains(QStringLiteral("4242")), shown);
+    check("other parameters kept", shown.contains(QStringLiteral("tags=1girl")), shown);
+
+    const QUrl plain(QStringLiteral("https://danbooru.donmai.us/posts.json?tags=1girl&page=2"));
+    equal("URL without credentials unchanged", NetworkLog::redactedUrl(plain), plain.toString());
 }
 
 void testBlacklist()
@@ -249,6 +281,45 @@ void testSources()
     if (!posts.isEmpty()) {
         equal("post tags are unescaped", posts.first().tags.join(QLatin1Char(',')),
               QStringLiteral("baldur's_gate_3,1girl"));
+    }
+
+    // TBIB's dapi sends no URLs at all, and its "image" (sha1) differs from
+    // "hash" (md5). Thumbnails and samples are named after the image, as the
+    // site's own HTML shows; building them from "hash" gave a 404 for every
+    // post. Shape copied from a live response.
+    GelbooruSource tbib(QStringLiteral("TBIB"), QStringLiteral("https://tbib.org"));
+    const QByteArray tbibPosts = R"JSON([{"directory":8234,"hash":"d6400490154c7a853bcc303f14785d0c",
+        "id":28821681,"image":"43e6bfebe7e5431a845014cfd002c49e73285df9.png","sample":true,
+        "tags":"1girl solo","rating":"questionable","score":null,"width":2250,"height":3000}])JSON";
+    const QVector<Post> tbibParsed = tbib.parseSearchResponse(tbibPosts);
+    check("tbib post parsed", tbibParsed.size() == 1, QString::number(tbibParsed.size()));
+    if (!tbibParsed.isEmpty()) {
+        const Post &p = tbibParsed.first();
+        equal("tbib id", p.id, QStringLiteral("28821681"));
+        equal("tbib thumbnail named after the image",
+              p.previewUrl,
+              QStringLiteral("https://tbib.org/thumbnails/8234/thumbnail_43e6bfebe7e5431a845014cfd002c49e73285df9.jpg"));
+        equal("tbib sample named after the image",
+              p.sampleUrl,
+              QStringLiteral("https://tbib.org/samples/8234/sample_43e6bfebe7e5431a845014cfd002c49e73285df9.jpg"));
+        equal("tbib original",
+              p.fileUrl,
+              QStringLiteral("https://tbib.org/images/8234/43e6bfebe7e5431a845014cfd002c49e73285df9.png"));
+    }
+
+    // Szurubooru's API docs require "Accept: application/json".
+    SzurubooruSource szuru(QStringLiteral("Szuru"), QStringLiteral("https://host.example/booru"));
+    const QNetworkRequest szuruRequest = szuru.buildSearchRequest(QStringLiteral("1girl"), 1, 5);
+    equal("szurubooru sends Accept", QString::fromLatin1(szuruRequest.rawHeader("Accept")),
+          QStringLiteral("application/json"));
+
+    const QByteArray szuruPosts = R"JSON({"results":[{"id":7,"contentUrl":"data/posts/7_a.png",
+        "thumbnailUrl":"data/generated-thumbnails/7_a.jpg","tags":[]}]})JSON";
+    const QVector<Post> szuruParsed = szuru.parseSearchResponse(szuruPosts);
+    check("szurubooru post parsed", szuruParsed.size() == 1, QString::number(szuruParsed.size()));
+    if (!szuruParsed.isEmpty()) {
+        equal("szurubooru in a subpath keeps the subpath", szuruParsed.first().fileUrl,
+              QStringLiteral("https://host.example/booru/data/posts/7_a.png"));
     }
 }
 
@@ -486,6 +557,163 @@ void testPluginSource()
     check("event loop survived the capability query too", ticks >= 3, QStringLiteral("%1 ticks").arg(ticks));
     equal("blacklist reached the plugin request", composed.result().url().toString(),
           QStringLiteral("https://example.org/x?q=1girl -spoiler"));
+
+    // "id": 42 is what a Python plugin naturally returns; it used to be
+    // turned into "" and the post silently dropped.
+    const QString intIdPath = dir.filePath(QStringLiteral("int_id.py"));
+    QFile intId(intIdPath);
+    if (!intId.open(QIODevice::WriteOnly)) {
+        check("int-id plugin script written", false);
+        return;
+    }
+    intId.write(
+        "def build_search_request(base_url, tags, page, per_page):\n"
+        "    return {'url': base_url}\n"
+        "def parse_response(body, base_url):\n"
+        "    return [{'id': 42, 'file_url': 'https://example.org/a.png'},\n"
+        "            {'id': 'abc', 'file_url': 'https://example.org/b.png'},\n"
+        "            {'file_url': 'https://example.org/no-id.png'}]\n");
+    intId.close();
+
+    PythonPluginSource intIdSource(QStringLiteral("IntId"), QStringLiteral("https://example.org"), intIdPath);
+    const QVector<Post> intIdPosts = intIdSource.parseSearchResponse("{}");
+    check("numeric and string ids both kept, missing id dropped", intIdPosts.size() == 2,
+          QString::number(intIdPosts.size()));
+    if (intIdPosts.size() == 2) {
+        equal("numeric id converted", intIdPosts.at(0).id, QStringLiteral("42"));
+        equal("string id unchanged", intIdPosts.at(1).id, QStringLiteral("abc"));
+    }
+}
+
+void testThumbnailCancel()
+{
+    begin("Thumbnail loader cancels every request");
+
+    // A server that accepts connections and never answers, so every request
+    // stays in flight until cancelAll().
+    QTcpServer server;
+    if (!server.listen(QHostAddress::LocalHost, 0)) {
+        check("local test server", false);
+        return;
+    }
+    // Only a connection that carried a request can hold one open; Qt may also
+    // keep idle connections around for reuse, which block nothing.
+    QList<QTcpSocket *> sockets;
+    QSet<QTcpSocket *> carriedRequest;
+    QObject::connect(&server, &QTcpServer::newConnection, [&server, &sockets, &carriedRequest]() {
+        while (server.hasPendingConnections()) {
+            QTcpSocket *socket = server.nextPendingConnection();
+            // Drain what arrives: a socket with unread data is not polled for
+            // EOF, so a client-side close would go unnoticed.
+            QObject::connect(socket, &QTcpSocket::readyRead, socket, [socket, &carriedRequest]() {
+                if (socket->readAll().contains("GET "))
+                    carriedRequest.insert(socket);
+            });
+            sockets.append(socket);
+        }
+    });
+
+    ThumbnailLoader loader;
+    int delivered = 0;
+    QObject::connect(&loader, &ThumbnailLoader::thumbnailReady, [&delivered]() { ++delivered; });
+
+    // Distinct hosts get separate connection pools, so all 40 really connect.
+    const int total = 40;
+    for (int i = 0; i < total; ++i) {
+        const QString host = (i % 2 == 0) ? QStringLiteral("127.0.0.1") : QStringLiteral("localhost");
+        loader.request(i, QUrl(QStringLiteral("http://%1:%2/t%3.jpg").arg(host).arg(server.serverPort()).arg(i)));
+    }
+
+    QElapsedTimer waited;
+    waited.start();
+    while (waited.elapsed() < 1500)
+        QApplication::processEvents(QEventLoop::AllEvents, 20);
+    const int connected = int(sockets.size());
+
+    loader.cancelAll();
+
+    // An aborted request closes its connection; a skipped one stays open
+    // with its request still pending.
+    waited.restart();
+    while (waited.elapsed() < 1500)
+        QApplication::processEvents(QEventLoop::AllEvents, 20);
+    int stillPending = 0;
+    for (QTcpSocket *socket : std::as_const(sockets)) {
+        if (socket->state() == QAbstractSocket::ConnectedState && carriedRequest.contains(socket))
+            ++stillPending;
+    }
+    check("requests reached the server", !carriedRequest.isEmpty(),
+          QStringLiteral("%1 connections, %2 with a request").arg(connected).arg(carriedRequest.size()));
+    check("no request left pending after cancelAll()", stillPending == 0,
+          QStringLiteral("%1 of %2 still pending").arg(stillPending).arg(carriedRequest.size()));
+    check("nothing delivered after cancelAll()", delivered == 0, QString::number(delivered));
+}
+
+void testTheme()
+{
+    begin("Theme palette");
+    const QString path = ThemeManager::configFilePath();
+    QFile::remove(path);
+
+    const QPalette system = QApplication::palette();
+
+    // First run: a starter file, but the system palette stays live.
+    ThemeManager::applyTheme();
+    QJsonObject root = QJsonDocument::fromJson([&path]() {
+        QFile f(path);
+        f.open(QIODevice::ReadOnly);
+        return f.readAll();
+    }()).object();
+    check("starter file holds no applied colors", !root.contains(QStringLiteral("colors")));
+    check("starter file offers example colors", root.contains(QStringLiteral("exampleColors")));
+
+    // A real theme must keep disabled text distinguishable.
+    QJsonObject colors;
+    colors[QStringLiteral("window")] = QStringLiteral("#2E3440");
+    colors[QStringLiteral("button")] = QStringLiteral("#434C5E");
+    colors[QStringLiteral("buttonText")] = QStringLiteral("#ECEFF4");
+    colors[QStringLiteral("text")] = QStringLiteral("#E5E9F0");
+    colors[QStringLiteral("base")] = QStringLiteral("#2E3440");
+    root[QStringLiteral("colors")] = colors;
+    {
+        QFile f(path);
+        f.open(QIODevice::WriteOnly);
+        f.write(QJsonDocument(root).toJson());
+    }
+    ThemeManager::applyTheme();
+    const QPalette themed = QApplication::palette();
+    equal("theme color applied", themed.color(QPalette::Active, QPalette::ButtonText).name(),
+          QStringLiteral("#eceff4"));
+    check("disabled button text differs from active",
+          themed.color(QPalette::Disabled, QPalette::ButtonText) != themed.color(QPalette::Active, QPalette::ButtonText),
+          themed.color(QPalette::Disabled, QPalette::ButtonText).name());
+
+    // A 0.3.0 file: "colors" equal to the seeded system snapshot is no
+    // choice of the user's and must stop freezing the system theme.
+    QJsonObject snapshot;
+    snapshot[QStringLiteral("window")] = QStringLiteral("#ffefefef");
+    QJsonObject old;
+    old[QStringLiteral("colors")] = snapshot;
+    old[QStringLiteral("systemDefaultColors")] = snapshot;
+    old[QStringLiteral("defaultIconSize")] = 220;
+    {
+        QFile f(path);
+        f.open(QIODevice::WriteOnly);
+        f.write(QJsonDocument(old).toJson());
+    }
+    ThemeManager::applyTheme();
+    root = QJsonDocument::fromJson([&path]() {
+        QFile f(path);
+        f.open(QIODevice::ReadOnly);
+        return f.readAll();
+    }()).object();
+    check("old seeded snapshot removed", !root.contains(QStringLiteral("colors"))
+          && !root.contains(QStringLiteral("systemDefaultColors")));
+    check("system palette back in use",
+          QApplication::palette().color(QPalette::Disabled, QPalette::ButtonText)
+              == system.color(QPalette::Disabled, QPalette::ButtonText));
+
+    QFile::remove(path);
 }
 
 } // namespace
@@ -503,6 +731,7 @@ int main(int argc, char **argv)
                   + QStringLiteral("/library.sqlite3"));
 
     testHtmlEntities();
+    testNetworkLogRedaction();
     testBlacklist();
     testTagInput();
     testSources();
@@ -511,6 +740,9 @@ int main(int argc, char **argv)
     testTagExclusionComposition();
     testPluginSource();
     testLibraryDatabase();
+    testThumbnailCancel();
+    // Last: it changes the application palette.
+    testTheme();
 
     std::cout << (failures ? "\nFAILED checks: " : "\nall checks passed: ") << failures << "\n";
     return failures == 0 ? 0 : 1;

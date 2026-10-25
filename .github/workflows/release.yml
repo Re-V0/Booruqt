@@ -1,0 +1,135 @@
+# Builds distro packages for a release tag and attaches them to a GitHub
+# release.
+#
+# GitHub is a push mirror of GitLab (canonical). Pushing a tag to GitLab
+# lets the mirror bring it here, and that push starts this workflow. If it
+# does not start (mirror not pushing tags, Actions disabled), run it by hand:
+# Actions -> "Release packages" -> Run workflow, with the existing tag name.
+#
+# Each build job runs the test suite first, so a broken tag publishes nothing.
+
+name: Release packages
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build, for example v0.3.1'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+jobs:
+  arch:
+    name: Arch Linux
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build tools
+        run: pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-tools python
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Check that PKGBUILD matches the tag
+        run: grep -qx "pkgver=${TAG#v}" PKGBUILD
+
+      # makepkg refuses to run as root. The PKGBUILD fetches the same tag
+      # from GitLab, so this also tests the PKGBUILD exactly as users get it.
+      - name: Build, test, package
+        run: |
+          useradd -m builder
+          chown -R builder: .
+          sudo -u builder makepkg --noconfirm
+
+      # The name filter skips the blairqt-debug package makepkg also builds.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: arch
+          path: blairqt-[0-9]*-x86_64.pkg.tar.zst
+          if-no-files-found: error
+
+  deb:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    # Debian 13 and Ubuntu 24.04 name the Qt libraries differently
+    # (libqt6core6t64 vs ...), so one .deb cannot serve both.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Debian 13
+            image: debian:13
+            suffix: debian13
+          - label: Ubuntu 24.04
+            image: ubuntu:24.04
+            suffix: ubuntu24.04
+    container: ${{ matrix.image }}
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git cmake ninja-build g++ dpkg-dev file python3 \
+            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
+            libqt6sql6-sqlite libgl-dev
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Build and test
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+
+      - name: Package
+        run: |
+          cd build
+          cpack -G DEB
+          version="${TAG#v}"
+          mv "blairqt_${version}_amd64.deb" "../blairqt_${version}-${{ matrix.suffix }}_amd64.deb"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb-${{ matrix.suffix }}
+          path: blairqt_*_amd64.deb
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [arch, deb]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Release notes = the tagged commit's message, minus its trailers.
+      # Re-running the workflow replaces the files of an existing release.
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git log -1 --format=%B | grep -vE '^(Co-Authored-By|Claude-Session):' > notes.md
+          ls -l dist
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --title "${TAG#v}" --notes-file notes.md --verify-tag
+          fi

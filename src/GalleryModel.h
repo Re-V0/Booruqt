@@ -33,6 +33,9 @@ public:
     void markThumbnailRequested(int row);
     // Sorts descending internally to avoid index-shifting bugs.
     void removeRows(const QList<int> &rows);
+    // Rows still waiting for a thumbnail become requestable again. For use
+    // after the loader's in-flight requests were cancelled.
+    void resetMissingThumbnails();
 
 private:
     QVector<Post> m_posts;

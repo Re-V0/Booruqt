@@ -72,6 +72,21 @@ void writeRoot(const QJsonObject &root)
         file.write(QJsonDocument(root).toJson());
 }
 
+// The palette the platform gave us, captured before the first theme is
+// applied. Every theme is built on top of it, and "default" restores it.
+const QPalette &systemPalette()
+{
+    static const QPalette palette = QApplication::palette();
+    return palette;
+}
+
+QColor blend(const QColor &a, const QColor &b)
+{
+    return QColor((a.red() + b.red()) / 2,
+                  (a.green() + b.green()) / 2,
+                  (a.blue() + b.blue()) / 2);
+}
+
 } // namespace
 
 QString ThemeManager::configFilePath()
@@ -83,39 +98,66 @@ QString ThemeManager::configFilePath()
 
 void ThemeManager::applyTheme()
 {
+    const QPalette &system = systemPalette();
+
     const QString path = configFilePath();
     if (!QFile::exists(path)) {
         // Seeds a starter file with real values to tweak, not a blank one.
-        const QJsonObject snapshot = paletteToJson(QApplication::palette());
+        // They go under "exampleColors": a snapshot stored as "colors" would
+        // be re-applied forever and freeze today's system theme.
         QJsonObject root;
-        root[QStringLiteral("colors")] = snapshot;
-        root[QStringLiteral("systemDefaultColors")] = snapshot;
+        root[QStringLiteral("exampleColors")] = paletteToJson(system);
         root[QStringLiteral("defaultIconSize")] = 220;
         writeRoot(root);
+        QApplication::setPalette(system);
         return;
     }
 
     QJsonObject root = readRoot();
 
-    // Backfill: capture fresh, never trust stored "colors" (may be customized).
-    if (!root.contains(QStringLiteral("systemDefaultColors"))) {
-        root[QStringLiteral("systemDefaultColors")] = paletteToJson(QApplication::palette());
+    // Files written by 0.3.0 and earlier: "colors" was seeded with a system
+    // snapshot. Unchanged since, it is no theme the user chose - drop it.
+    const QJsonValue oldSnapshot = root.value(QStringLiteral("systemDefaultColors"));
+    if (!oldSnapshot.isUndefined()) {
+        if (root.value(QStringLiteral("colors")) == oldSnapshot)
+            root.remove(QStringLiteral("colors"));
+        root.remove(QStringLiteral("systemDefaultColors"));
         writeRoot(root);
     }
 
     const QJsonObject colors = root.value(QStringLiteral("colors")).toObject();
-    if (colors.isEmpty())
+    if (colors.isEmpty()) {
+        QApplication::setPalette(system);
         return;
+    }
 
-    QPalette palette = QApplication::palette();
+    // Built from the system palette, not the current one, so switching
+    // between themes never layers one over another.
+    QPalette palette = system;
     for (const RoleEntry &entry : kRoles) {
         const QJsonValue v = colors.value(QLatin1String(entry.key));
         if (!v.isString())
             continue;
         const QColor color(v.toString());
-        if (color.isValid())
-            palette.setColor(entry.role, color);
+        if (!color.isValid())
+            continue;
+        // Not setColor(role, color): that also overwrites the Disabled group,
+        // and disabled widgets would look clickable.
+        palette.setColor(QPalette::Active, entry.role, color);
+        palette.setColor(QPalette::Inactive, entry.role, color);
+        palette.setColor(QPalette::Disabled, entry.role, color);
     }
+
+    // Disabled text: halfway between the text and what it is drawn on.
+    palette.setColor(QPalette::Disabled, QPalette::WindowText,
+                     blend(palette.color(QPalette::Active, QPalette::WindowText),
+                           palette.color(QPalette::Active, QPalette::Window)));
+    palette.setColor(QPalette::Disabled, QPalette::Text,
+                     blend(palette.color(QPalette::Active, QPalette::Text),
+                           palette.color(QPalette::Active, QPalette::Base)));
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText,
+                     blend(palette.color(QPalette::Active, QPalette::ButtonText),
+                           palette.color(QPalette::Active, QPalette::Button)));
     QApplication::setPalette(palette);
 }
 
@@ -165,12 +207,9 @@ void ThemeManager::applyCuratedTheme(const QString &name)
 
 void ThemeManager::applyDefaultTheme()
 {
+    // No "colors" key = the live system palette, whatever it is today.
     QJsonObject root = readRoot();
-    const QJsonObject defaults = root.value(QStringLiteral("systemDefaultColors")).toObject();
-    if (defaults.isEmpty())
-        return;
-
-    root[QStringLiteral("colors")] = defaults;
+    root.remove(QStringLiteral("colors"));
     writeRoot(root);
     applyTheme();
 }

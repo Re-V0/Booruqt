@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(blairqt VERSION 0.3.0 LANGUAGES CXX)
+project(blairqt VERSION 0.3.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -42,7 +42,6 @@ add_executable(blairqt
     src/sources/E621Source.cpp
     src/sources/PhilomenaSource.h
     src/sources/PhilomenaSource.cpp
-    src/sources/SzurubooruSource.cpp
     src/sources/SzurubooruSource.h
     src/sources/SzurubooruSource.cpp
     src/sources/PythonPluginSource.h
@@ -84,8 +83,12 @@ install(FILES resources/blairqt.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/h
 # empty placeholders for any string it re-extracts), only via the manual
 # "blairqt_lupdate" target below when someone wants to refresh the source
 # strings after adding/changing tr() calls.
-find_program(LRELEASE_EXECUTABLE NAMES lrelease6 lrelease-qt6 lrelease)
-find_program(LUPDATE_EXECUTABLE NAMES lupdate6 lupdate-qt6 lupdate)
+# Debian and Ubuntu keep the Qt 6 tools only in Qt's own bin dir
+# (/usr/lib/qt6/bin), not on PATH; without the hint the .deb would ship
+# with no translations.
+set(BLAIRQT_QT_BIN_DIR "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}")
+find_program(LRELEASE_EXECUTABLE NAMES lrelease6 lrelease-qt6 lrelease HINTS "${BLAIRQT_QT_BIN_DIR}")
+find_program(LUPDATE_EXECUTABLE NAMES lupdate6 lupdate-qt6 lupdate HINTS "${BLAIRQT_QT_BIN_DIR}")
 
 set(BLAIRQT_TS_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/translations/blairqt_en.ts
@@ -161,6 +164,8 @@ if(BUILD_TESTING)
         src/sources/SzurubooruSource.cpp
         src/sources/PythonPluginSource.cpp
         src/NetworkLog.cpp
+        src/ThumbnailLoader.cpp
+        src/ThemeManager.cpp
     )
     target_include_directories(blairqt_tests PRIVATE src)
     target_link_libraries(blairqt_tests PRIVATE Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent)
@@ -176,3 +181,20 @@ if(LUPDATE_EXECUTABLE)
         VERBATIM
     )
 endif()
+
+# Debian/Ubuntu package: `cpack -G DEB` in the build dir, after building with
+# -DCMAKE_INSTALL_PREFIX=/usr. Library dependencies come from dpkg-shlibdeps
+# (package dpkg-dev); the SQLite driver is a Qt plugin, which shlibdeps
+# cannot see, so it is listed by hand.
+set(CPACK_PACKAGE_NAME "blairqt")
+set(CPACK_PACKAGE_VENDOR "re-v0")
+set(CPACK_PACKAGE_CONTACT "re-v0 <bird_of_hermes77@disroot.org>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Native Qt6 booru gallery client with a local, tag-indexed library")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://gitlab.com/re-v0/blairqt")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt6sql6-sqlite")
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "python3")
+include(CPack)

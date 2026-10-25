@@ -8,6 +8,8 @@
 #include "NetworkLog.h"
 
 #include <QTime>
+#include <QUrlQuery>
+#include <QStringList>
 
 NetworkLog &NetworkLog::instance()
 {
@@ -19,4 +21,28 @@ void NetworkLog::log(const QString &line)
 {
     const QString stamped = QTime::currentTime().toString(QStringLiteral("HH:mm:ss")) + QStringLiteral("  ") + line;
     emit entryAdded(stamped);
+}
+
+QString NetworkLog::redactedUrl(const QUrl &url)
+{
+    static const QStringList secretKeys = {
+        QStringLiteral("api_key"), QStringLiteral("user_id"),
+        QStringLiteral("login"), QStringLiteral("password_hash"),
+    };
+
+    QUrlQuery query(url);
+    bool changed = false;
+    for (const QString &key : secretKeys) {
+        if (!query.hasQueryItem(key))
+            continue;
+        query.removeAllQueryItems(key);
+        query.addQueryItem(key, QStringLiteral("***"));
+        changed = true;
+    }
+    if (!changed)
+        return url.toString();
+
+    QUrl copy = url;
+    copy.setQuery(query);
+    return copy.toString();
 }

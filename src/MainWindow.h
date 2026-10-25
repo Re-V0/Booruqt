@@ -123,6 +123,8 @@ private:
                            int httpStatus, const QByteArray &data);
     // A round ends once no request is still being built and none is in flight.
     void finishSearchRoundIfDone();
+    // Cancels the in-flight search replies; their finished() is then ignored.
+    void abortPendingSearchReplies();
     void populateSourceCombo(const QString &selectName = {});
     void updateSourceSelectionUi();
     void updateDownloadButtonLabel();

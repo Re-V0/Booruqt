@@ -1,6 +1,6 @@
 # Maintainer: re-v0
 pkgname=blairqt
-pkgver=0.3.0
+pkgver=0.3.1
 pkgrel=1
 pkgdesc="Native Qt6 booru gallery client - browse, download and locally index booru-style image boards"
 arch=('x86_64')
@@ -11,12 +11,16 @@ optdepends=('python: run Python-scripted source plugins ("python" flavor)'
             'python-flask: HTML-scrape bridge (tools/html_scrape_bridge.py)'
             'python-cloudscraper: HTML-scrape bridge'
             'python-beautifulsoup4: HTML-scrape bridge')
-makedepends=('cmake' 'ninja' 'qt6-tools')
-source=("$pkgname-$pkgver.tar.bz2::$url/-/archive/v$pkgver/$pkgname-v$pkgver.tar.bz2")
-sha256sums=('af3d4853caa62616f7142d7a45593316fea29b9e993b385f70a73b903f4ba607')
+makedepends=('cmake' 'ninja' 'qt6-tools' 'git')
+# The plugin tests run plugin_runner.py.
+checkdepends=('python')
+# A git tag, not the release tarball: the tarball contains this PKGBUILD, so
+# its checksum could never be written into the PKGBUILD of the same tag.
+source=("$pkgname::git+$url.git#tag=v$pkgver")
+sha256sums=('SKIP')
 
 build() {
-    cmake -S "$pkgname-v$pkgver" -B build \
+    cmake -S "$pkgname" -B build \
         -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr
@@ -30,5 +34,5 @@ check() {
 
 package() {
     DESTDIR="$pkgdir" cmake --install build
-    install -Dm644 "$pkgname-v$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "$pkgname/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

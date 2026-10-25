@@ -45,9 +45,15 @@ void ThumbnailLoader::request(int row, const QUrl &url)
 
 void ThumbnailLoader::cancelAll()
 {
-    for (auto it = m_pendingRows.constBegin(); it != m_pendingRows.constEnd(); ++it)
-        it.key()->abort();
+    // abort() emits finished() synchronously and onReplyFinished() would
+    // take() from m_pendingRows mid-iteration: copy, clear, then abort.
+    const QList<QNetworkReply *> replies = m_pendingRows.keys();
     m_pendingRows.clear();
+    for (QNetworkReply *reply : replies)
+        reply->abort();
+
+    // Decodes already running off-thread still carry the old row numbers.
+    ++m_generation;
 }
 
 void ThumbnailLoader::onReplyFinished(QNetworkReply *reply)
@@ -63,12 +69,15 @@ void ThumbnailLoader::onReplyFinished(QNetworkReply *reply)
 
     const QByteArray bytes = reply->readAll();
     const QSize targetSize = m_targetSize;
+    const int generation = m_generation;
 
     // Decode off-thread as QImage; QPixmap is GUI-thread only.
     auto *watcher = new QFutureWatcher<QImage>(this);
-    connect(watcher, &QFutureWatcher<QImage>::finished, this, [this, watcher, row]() {
+    connect(watcher, &QFutureWatcher<QImage>::finished, this, [this, watcher, row, generation]() {
         const QImage image = watcher->result();
         watcher->deleteLater();
+        if (generation != m_generation)
+            return; // cancelAll() ran since: this row number now means another post
         if (!image.isNull())
             emit thumbnailReady(row, QPixmap::fromImage(image));
     });

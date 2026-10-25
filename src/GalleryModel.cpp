@@ -102,3 +102,11 @@ void GalleryModel::removeRows(const QList<int> &rows)
         endRemoveRows();
     }
 }
+
+void GalleryModel::resetMissingThumbnails()
+{
+    for (int row = 0; row < m_requested.size(); ++row) {
+        if (m_thumbnails.at(row).isNull())
+            m_requested[row] = false;
+    }
+}

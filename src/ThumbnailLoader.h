@@ -38,4 +38,6 @@ private:
     QNetworkAccessManager *m_manager;
     QSize m_targetSize{220, 220};
     QHash<QNetworkReply *, int> m_pendingRows;
+    // Bumped by cancelAll(); a decode started under an older value is dropped.
+    int m_generation = 0;
 };

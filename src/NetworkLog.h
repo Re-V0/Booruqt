@@ -9,6 +9,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QUrl>
 
 // Process-wide log of outgoing requests and responses, for debugging.
 class NetworkLog : public QObject {
@@ -17,6 +18,10 @@ public:
     static NetworkLog &instance();
 
     void log(const QString &line);
+
+    // The URL as text with credentials in the query (api_key, user_id, ...)
+    // replaced by "***". The log is on screen, so it must never show them.
+    static QString redactedUrl(const QUrl &url);
 
 signals:
     void entryAdded(const QString &stampedLine);

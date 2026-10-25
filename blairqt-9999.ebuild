@@ -23,8 +23,12 @@ RDEPEND="
 	python? ( dev-lang/python:* )
 "
 DEPEND="${RDEPEND}"
-# lrelease/lupdate only; nothing from qttools is linked in.
-BDEPEND="dev-qt/qttools:6[linguist]"
+# lrelease/lupdate only; nothing from qttools is linked in. The plugin
+# tests run plugin_runner.py, so USE=test needs python even with -python.
+BDEPEND="
+	dev-qt/qttools:6[linguist]
+	test? ( dev-lang/python:* )
+"
 
 src_configure() {
 	local mycmakeargs=(

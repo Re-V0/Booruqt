@@ -30,28 +30,33 @@ inline QString decodeHtmlEntities(const QString &text)
         }
 
         const QStringView entity = QStringView(text).mid(i + 1, end - i - 1);
-        QChar decoded;
+        // A QString, not a QChar: code points above U+FFFF (emoji) need two
+        // UTF-16 units, and QChar(code) would truncate them (or assert).
+        QString decoded;
         if (entity.startsWith(QLatin1Char('#'))) {
             bool ok = false;
             const bool hex = entity.size() > 1 && (entity.at(1) == QLatin1Char('x') || entity.at(1) == QLatin1Char('X'));
             const uint code = hex ? entity.mid(2).toUInt(&ok, 16) : entity.mid(1).toUInt(&ok, 10);
-            if (ok && code > 0 && code <= 0x10FFFF)
-                decoded = QChar(code);
+            const bool surrogate = code >= 0xD800 && code <= 0xDFFF;
+            if (ok && code > 0 && code <= 0x10FFFF && !surrogate) {
+                const char32_t codePoint = code;
+                decoded = QString::fromUcs4(&codePoint, 1);
+            }
         } else if (entity == QLatin1String("amp")) {
-            decoded = QLatin1Char('&');
+            decoded = QStringLiteral("&");
         } else if (entity == QLatin1String("lt")) {
-            decoded = QLatin1Char('<');
+            decoded = QStringLiteral("<");
         } else if (entity == QLatin1String("gt")) {
-            decoded = QLatin1Char('>');
+            decoded = QStringLiteral(">");
         } else if (entity == QLatin1String("quot")) {
-            decoded = QLatin1Char('"');
+            decoded = QStringLiteral("\"");
         } else if (entity == QLatin1String("apos")) {
-            decoded = QLatin1Char('\'');
+            decoded = QStringLiteral("'");
         } else if (entity == QLatin1String("nbsp")) {
-            decoded = QLatin1Char(' ');
+            decoded = QStringLiteral(" ");
         }
 
-        if (decoded.isNull()) {
+        if (decoded.isEmpty()) {
             out.append(text.at(i));
             continue;
         }

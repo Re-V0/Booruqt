@@ -118,12 +118,20 @@ QVector<Post> PythonPluginSource::parseSearchResponse(const QByteArray &data) co
     const QJsonDocument result = runPlugin(QStringLiteral("parse_response"), params);
 
     QVector<Post> posts;
+    int skipped = 0;
     for (const QJsonValue &v : result.array()) {
         const QJsonObject o = v.toObject();
-        const QString id = o.value(QStringLiteral("id")).toString();
+        // A Python plugin naturally returns "id": 42; toString() alone would
+        // turn that into "" and drop the post.
+        const QJsonValue idValue = o.value(QStringLiteral("id"));
+        QString id = idValue.toString();
+        if (id.isEmpty() && idValue.isDouble())
+            id = QString::number(idValue.toInteger());
         const QString fileUrl = o.value(QStringLiteral("file_url")).toString();
-        if (id.isEmpty() || fileUrl.isEmpty())
+        if (id.isEmpty() || fileUrl.isEmpty()) {
+            ++skipped;
             continue;
+        }
 
         Post post;
         post.id = id;
@@ -139,6 +147,11 @@ QVector<Post> PythonPluginSource::parseSearchResponse(const QByteArray &data) co
         for (const QJsonValue &tag : o.value(QStringLiteral("tags")).toArray())
             post.tags.append(tag.toString());
         posts.append(post);
+    }
+
+    if (skipped > 0) {
+        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN [%1]: skipped %2 post(s) without \"id\" or \"file_url\"")
+            .arg(m_name).arg(skipped));
     }
     return posts;
 }

@@ -18,6 +18,7 @@
 #include <QStringList>
 #include <QJsonValue>
 #include <QXmlStreamReader>
+#include <QFileInfo>
 
 GelbooruSource::GelbooruSource(QString name, QString baseUrl, QString apiKey, QString userId,
                                 QString cookie, QString userAgent, QString htmlBridgeUrl)
@@ -91,15 +92,22 @@ static Post postFromAttributeMap(const QString &sourceName, const QString &baseU
     const bool hasSample = a.value(QStringLiteral("sample")) == QStringLiteral("true")
         || a.value(QStringLiteral("sample")) == QStringLiteral("1");
 
+    // Thumbnails and samples are named after the image file, not the md5
+    // "hash" field. On Safebooru the two happen to be equal; on TBIB the
+    // image is named by sha1, so building from "hash" gives a 404.
+    QString derivedName = QFileInfo(image).completeBaseName();
+    if (derivedName.isEmpty())
+        derivedName = hash;
+
     if (p.fileUrl.isEmpty() && !directory.isEmpty() && !image.isEmpty())
         p.fileUrl = baseUrl + QStringLiteral("/images/") + directory + QLatin1Char('/') + image;
-    if (p.previewUrl.isEmpty() && !directory.isEmpty() && !hash.isEmpty()) {
+    if (p.previewUrl.isEmpty() && !directory.isEmpty() && !derivedName.isEmpty()) {
         p.previewUrl = baseUrl + QStringLiteral("/thumbnails/") + directory
-            + QStringLiteral("/thumbnail_") + hash + QStringLiteral(".jpg");
+            + QStringLiteral("/thumbnail_") + derivedName + QStringLiteral(".jpg");
     }
-    if (p.sampleUrl.isEmpty() && hasSample && !directory.isEmpty() && !hash.isEmpty()) {
+    if (p.sampleUrl.isEmpty() && hasSample && !directory.isEmpty() && !derivedName.isEmpty()) {
         p.sampleUrl = baseUrl + QStringLiteral("/samples/") + directory
-            + QStringLiteral("/sample_") + hash + QStringLiteral(".jpg");
+            + QStringLiteral("/sample_") + derivedName + QStringLiteral(".jpg");
     }
 
     if (p.previewUrl.isEmpty())

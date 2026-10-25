@@ -32,6 +32,8 @@ QNetworkRequest SzurubooruSource::buildSearchRequest(const QString &tags, int pa
 
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
+    // The API docs require this on every request; Qt does not send it.
+    req.setRawHeader("Accept", "application/json");
     if (!m_apiKey.isEmpty() && !m_userId.isEmpty()) {
         const QByteArray token = (m_userId + QLatin1Char(':') + m_apiKey).toUtf8().toBase64();
         req.setRawHeader("Authorization", "Token " + token);
@@ -65,8 +67,10 @@ QVector<Post> SzurubooruSource::parseSearchResponse(const QByteArray &data) cons
         p.height = o.value(QStringLiteral("canvasHeight")).toInt();
         p.artistSourceUrl = o.value(QStringLiteral("source")).toString();
 
-        // URLs are relative to the instance root, not the /api prefix.
-        const QUrl base(m_baseUrl);
+        // URLs are relative to the instance root, not the /api prefix. The
+        // trailing "/" keeps an instance in a subpath (https://host/booru)
+        // from losing its last segment in resolved().
+        const QUrl base(m_baseUrl + QLatin1Char('/'));
         const QString contentPath = o.value(QStringLiteral("contentUrl")).toString();
         const QString thumbPath = o.value(QStringLiteral("thumbnailUrl")).toString();
         p.fileUrl = contentPath.isEmpty() ? QString() : base.resolved(QUrl(contentPath)).toString();

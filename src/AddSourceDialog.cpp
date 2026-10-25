@@ -348,8 +348,9 @@ void AddSourceDialog::sendProbeRequest(QNetworkRequest request, const QString &f
     }
 
     request.setTransferTimeout(kProbeTimeoutMs);
-    m_logEdit->appendPlainText(QStringLiteral("[%1] GET %2").arg(flavor, request.url().toString()));
-    NetworkLog::instance().log(QStringLiteral("(source test) GET %1").arg(request.url().toString()));
+    const QString shownUrl = NetworkLog::redactedUrl(request.url());
+    m_logEdit->appendPlainText(QStringLiteral("[%1] GET %2").arg(flavor, shownUrl));
+    NetworkLog::instance().log(QStringLiteral("(source test) GET %1").arg(shownUrl));
 
     QNetworkReply *reply = m_probeNetwork->get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, flavor]() {
