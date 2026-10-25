@@ -9,7 +9,7 @@ A desktop booru client. Qt6, C++, no Electron.
 B.LAIR_QT is native software for browsing boorus with a local gallery. What
 separates it from other booru clients is that the gallery acts as the booru
 repository itself: it respects source and tags, and lives in ordinary folders
-your Linux file manager already understands.
+your file manager already understands.
 
 It searches several boorus at once and downloads the originals; tags go into a
 SQLite index next to the files. Delete the database and the files are still
@@ -48,9 +48,9 @@ installs nothing; settings and the library index live in your user profile.
 `README.txt` in the zip says which runtime version the build needs.
 
 macOS (Apple Silicon): open `blairqt-<version>-macos-arm64.dmg` and drag
-B.LAIR_QT to Applications. The app is not signed with an Apple Developer ID,
+`blairqt` to Applications. The app is not signed with an Apple Developer ID,
 so the first start is blocked: open System Settings → Privacy & Security and
-click "Open Anyway" next to B.LAIR_QT.
+click "Open Anyway" next to `blairqt`.
 
 Python plugins need Python 3: `python3` or `python` on PATH, or on Windows
 the `py` launcher from python.org. Set `BLAIRQT_PYTHON` to an interpreter's
@@ -113,10 +113,12 @@ When a site misbehaves, that dock is the first place to look.
 
 ## Library
 
-Downloads are indexed in SQLite with an FTS5 tag index and written into real
-nested folders — the same folders Dolphin or Thunar show. Move files between
-them from inside the app and the tags follow; re-downloading a post you
-already have is detected and skipped.
+Downloads are indexed in SQLite and written into real nested folders — the
+same folders Dolphin, Thunar, Explorer or Finder show. Move files between them
+from inside the app and the tags follow; re-downloading a post you already
+have is detected and skipped. A download is written to a temporary file and
+renamed only when complete, so a broken transfer never leaves half an image
+behind.
 
 Each image also gets a hidden tags sidecar next to it — `image.png` gets
 `.image.png.txt`, one line of space-separated tags. It follows the file when
@@ -125,7 +127,8 @@ tags without touching the database. The metadata is stored as `.txt` as well,
 because why not — txt is cheap.
 
 Search the library by tag, filter by folder, with or without subfolders.
-Zoom opens local files instantly, animated GIFs included.
+Tags match whole, ignoring case: `solo` does not find `solo_focus`. Zoom opens
+local files instantly, animated GIFs included.
 
 ## Blacklist
 
@@ -155,8 +158,8 @@ def supports_tag_exclusion() -> bool:      # optional
 
 Add it through **Add custom booru** → *Plugin script*; with Auto-detect on, the
 script is tried automatically. Tracebacks show up in the dialog log and the
-network log dock. Plugins need `python3` on `PATH`, and some need their own
-modules — the Newgrounds example in
+network log dock. Plugins need Python 3, found as described under
+Quickstart, and some need their own modules — the Newgrounds example in
 [`examples/`](examples/newgrounds_plugin.py) wants `argon2-cffi`.
 
 **Plugins run with your full user permissions. Only add scripts you trust.**
@@ -171,7 +174,10 @@ python3 tools/html_scrape_bridge.py
 ```
 
 It listens on `127.0.0.1:8765`. Tick *This site has no API (dapi)* when adding
-the source.
+the source. The packages ship the script too: `/usr/share/blairqt/tools/` on
+Linux, `/usr/local/share/blairqt/tools/` on FreeBSD, `tools\` next to
+`blairqt.exe` on Windows, `blairqt.app/Contents/Resources/tools/` on macOS.
+The tooltip of that checkbox shows the full path.
 
 ## Appearance and language
 
@@ -195,14 +201,34 @@ No network, no visible window:
 ctest --test-dir build --output-on-failure
 ```
 
-They cover blacklist matching, tag input, response parsing, library paging and
-the rule that a plugin never blocks the GUI thread.
+They cover blacklist matching, tag input, response parsing for every engine,
+the library (whole-tag search, paging, moving files, upgrading an older
+database), downloads, thumbnail loading, themes, the source list, and the rule
+that a plugin never blocks the GUI thread.
 
 ## Data locations
 
+Linux and FreeBSD:
+
 - Settings: `~/.config/blairqt/blairqt.conf`
 - Library DB, sources, theme: `~/.local/share/blairqt/blairqt/`
-- Thumbnail cache: `~/.cache/blairqt/`
+- Thumbnail cache: `~/.cache/blairqt/blairqt/blairqt/thumbnails/`
+- Downloads, until you pick another folder: `blairqt` in your pictures folder
+  (`XDG_PICTURES_DIR`, usually `~/Pictures`)
+
+Windows:
+
+- Settings: registry, `HKEY_CURRENT_USER\Software\blairqt\blairqt`
+- Library DB, sources, theme: `%APPDATA%\blairqt\blairqt\`
+- Thumbnail cache: `%LOCALAPPDATA%\blairqt\blairqt\cache\blairqt\thumbnails\`
+- Downloads: `blairqt` in your Pictures folder
+
+macOS:
+
+- Settings: `~/Library/Preferences/com.blairqt.blairqt.plist`
+- Library DB, sources, theme: `~/Library/Application Support/blairqt/blairqt/`
+- Thumbnail cache: `~/Library/Caches/blairqt/blairqt/blairqt/thumbnails/`
+- Downloads: `~/Pictures/blairqt/`
 
 ## Contributing
 
@@ -213,22 +239,13 @@ they take a second and need no network and no display:
 ctest --test-dir build --output-on-failure
 ```
 
-### Windows port
+### Windows and macOS
 
-Welcome, and I will merge it. I do not run Windows, so testing it is yours.
-
-The code does not stand in the way. There are no POSIX calls anywhere,
-everything goes through Qt, and the binary already looks for its translations
-and `plugin_runner.py` next to itself — so a portable layout (`blairqt.exe`
-beside `translations\` and `plugin_runner.py`) works with no changes at all.
-
-What is left to do:
-
-- resolve `python3` to whatever Python is called there (`python.exe`, or the
-  `py -3` launcher),
-- hide the tag sidecars — a leading dot hides nothing on Windows, so every
-  image would get a visible `.txt` neighbour,
-- bundle the Qt DLLs with `windeployqt` and ship a zip or an installer.
+Every push to `main` builds, tests and packages the program for all systems
+listed under Quickstart, Windows and macOS included. I do not run either of
+those two myself, so reports from them are especially welcome: say which
+version of Windows or macOS, and attach the network log if a site is
+involved.
 
 ## Support
 
@@ -245,6 +262,8 @@ license, but modifications to the files themselves stay MPL and stay open.
 
 **Trademarks.** Qt is a registered trademark of The Qt Company Ltd. B.LAIR_QT
 is an independent project and is neither affiliated with nor endorsed by The
-Qt Company. It links the Qt 6 libraries dynamically under the LGPL-3.0; those
-libraries are not bundled, and replacing them with your own build is both
-allowed and expected.
+Qt Company. It links the Qt 6 libraries dynamically under the LGPL-3.0. The
+Linux and FreeBSD packages use the Qt your system provides. The Windows zip and
+the macOS app carry unmodified Qt libraries next to the program; replacing
+them with your own build of the same Qt version is allowed. The Qt source code
+is available from [download.qt.io](https://download.qt.io/official_releases/qt/).
