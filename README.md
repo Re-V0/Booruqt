@@ -16,7 +16,7 @@ SQLite index next to the files. Delete the database and the files are still
 there, still sorted, still openable by anything else on the system.
 
 Boorus that are not on the list are usually one URL away: the app probes the
-site against seven engines and picks the one that fits. Anything else takes a
+site against eight engines and picks the one that fits. Anything else takes a
 short Python plugin — or, for sites with no API at all, the bundled
 HTML-scrape bridge.
 
@@ -96,23 +96,29 @@ blacklist a tag.
 
 ## Sources
 
-Seven generic parsers — Danbooru, Gelbooru/dapi, Moebooru, e621, Philomena,
-Szurubooru, Shimmie2 — cover dozens of sites without a class per site.
+Eight generic parsers — Danbooru, Gelbooru/dapi, Moebooru, e621, Philomena,
+Szurubooru, Shimmie2, and Gelbooru 0.1 without an API (the booru.org boards,
+read from their HTML post list) — cover dozens of sites without a class per
+site.
 
 **Add custom booru** works out which one fits from any address of the site:
 its front page, a post or a search, with or without `https://`. It reads the
 front page for the engine's traces and asks that engine first, then the
 others; it follows a redirect to `https` or `www.`, and keeps a booru
-installed in a subfolder. When nothing fits it says why, if it can tell: a
-bot protection page (Cloudflare, Anubis, DDoS-Guard) in the way, an API that
-wants a key, or a Gelbooru-engine site with its API turned off, which the
-HTML-scrape bridge below can still read.
+installed in a subfolder. It spaces its requests out and stops at the first
+"429 Too Many Requests". When nothing fits it says why, if it can tell: a bot
+protection page (Cloudflare, Anubis, DDoS-Guard) in the way, an API that wants
+a key, too many requests, or a Gelbooru-engine site it cannot read, which the
+HTML-scrape bridge below may still manage.
 
 Several sources can be merged into one gallery. Paging, infinite scroll and
 autoscroll are three ways to move through results; picking one disables the
 controls that stop making sense.
 
-Cloudflare-gated Gelbooru sites accept a cookie and User-Agent you paste in.
+Sites behind Cloudflare or similar protection accept a cookie (such as
+`cf_clearance`) and the User-Agent of the browser it came from, pasted in when
+adding the source. They go with every request to that site, whatever its
+engine: searches, tag suggestions, thumbnails, downloads and the viewer.
 Sites with no API at all can go through the bundled HTML-scrape bridge — those
 posts arrive without tags, rating or dimensions, which is the price of
 scraping HTML.

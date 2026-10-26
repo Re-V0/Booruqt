@@ -20,6 +20,7 @@
 #include "sources/PhilomenaSource.h"
 #include "sources/SzurubooruSource.h"
 #include "sources/ShimmieSource.h"
+#include "sources/GelbooruHtmlSource.h"
 #include "sources/PythonPluginSource.h"
 #include "NetworkLog.h"
 #include "ThumbnailLoader.h"
@@ -27,6 +28,7 @@
 #include "DownloadManager.h"
 #include "SourceManager.h"
 #include "SourceDetector.h"
+#include "SiteAccess.h"
 #include "AppInfo.h"
 
 #include <QApplication>
@@ -47,6 +49,7 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QUrlQuery>
+#include <QNetworkRequest>
 #include <QEventLoop>
 #include <functional>
 #include <iostream>
@@ -1308,6 +1311,7 @@ Detection detect(const QString &url, const QString &flavor = {})
     SourceDetector::Request request;
     request.url = url;
     request.flavor = flavor;
+    detector.setRequestSpacing(0);
     detector.start(request);
     QElapsedTimer waited;
     waited.start();
@@ -1332,6 +1336,16 @@ RouteServer::Answer data(const QByteArray &body, const QByteArray &type = "appli
     a.body = body;
     return a;
 }
+
+// A booru.org post list, as steambanners.booru.org sends it (shortened):
+// a post linked twice, tags in the title, a png thumbnail.
+const QByteArray kBooruOrgListing = R"(
+<div class="content"><span class="thumb"><a id="p34141" href="index.php?page=post&amp;s=view&amp;id=34141">
+<img src="https://thumbs.booru.org/steambanners/thumbnails//5/thumbnail_01ca93e6c40f95ce6b824bafce53667211be6609.jpg"
+ alt="post" border="0" title=" big sonic fan&amp;game  score:3 rating:Safe" class="preview"/></a></span>
+<span class="thumb"><a id="p34141b" href="index.php?page=post&amp;s=view&amp;id=34141"><img src="https://thumbs.booru.org/steambanners/thumbnails//5/thumbnail_01ca93e6c40f95ce6b824bafce53667211be6609.jpg" title="dup"/></a></span>
+<span class="thumb"><a href='index.php?page=post&amp;s=view&amp;id=34140'><img src='https://thumbs.booru.org/steambanners/thumbnails//30/thumbnail_727fd9.png' title=' cat  score:0 rating:Questionable'/></a></span>
+<a href="index.php?page=post&amp;s=list&amp;pid=20">Next</a></div>)";
 
 const QByteArray kGelbooruPosts =
     R"([{"id":3,"file_url":"https://img.example/3.jpg","preview_url":"https://img.example/t3.jpg","tags":"a b"}])";
@@ -1464,6 +1478,129 @@ void testDetectorEndToEnd()
         const Detection d = detect(QStringLiteral("ftp://nope"));
         check("not a web address", d.result.failure == SourceDetector::Failure::InvalidUrl);
     }
+
+    {
+        // booru.org: Gelbooru 0.1, no API; its HTML list is read instead.
+        RouteServer server([](const QString &path, const QUrlQuery &query) {
+            if (path == QStringLiteral("/"))
+                return html(R"(<a href="index.php?page=post&amp;s=list">Posts</a>)");
+            if (path == QStringLiteral("/index.php") && query.queryItemValue(QStringLiteral("s")) == QStringLiteral("list"))
+                return html(kBooruOrgListing);
+            if (path == QStringLiteral("/index.php"))
+                return html("<html><body>Gelbooru front page</body></html>");
+            return RouteServer::Answer();
+        });
+        const Detection d = detect(server.base());
+        equal("booru.org board read as gelbooru-html", d.result.flavor, QStringLiteral("gelbooru-html"));
+        check("right after the API that is not there",
+              d.probed == QStringList({QStringLiteral("gelbooru:"), QStringLiteral("gelbooru-html:")}),
+              d.probed.join(QLatin1Char(' ')));
+    }
+
+    {
+        // 429: stop at once instead of asking every other engine.
+        RouteServer server([](const QString &path, const QUrlQuery &) {
+            if (path == QStringLiteral("/"))
+                return html(R"(<a href="index.php?page=post&amp;s=list">Posts</a>)");
+            return html("<html><title>429 Too Many Requests</title></html>", 429);
+        });
+        const Detection d = detect(server.base());
+        check("reported as rate limited", d.result.failure == SourceDetector::Failure::RateLimited);
+        check("no request after the 429", server.requested.size() == 2, server.requested.join(QLatin1Char(' ')));
+    }
+
+    {
+        // Requests are spaced out by default.
+        RouteServer server([](const QString &, const QUrlQuery &) { return data("[]"); });
+        SourceDetector detector;
+        detector.setRequestSpacing(150);
+        bool done = false;
+        QObject::connect(&detector, &SourceDetector::finished, [&done](const SourceDetector::Result &) { done = true; });
+        SourceDetector::Request request;
+        request.url = server.base();
+        request.flavor = QStringLiteral("danbooru");
+        QElapsedTimer timer;
+        timer.start();
+        detector.start(request);
+        while (!done && timer.elapsed() < 10000)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+        // One engine, three passes ("", "all", "1girl"): three spaced requests.
+        check("three probes take at least three spacings", timer.elapsed() >= 3 * 150,
+              QString::number(timer.elapsed()) + QStringLiteral(" ms"));
+    }
+}
+
+void testGelbooruHtmlSource()
+{
+    begin("Gelbooru 0.1 HTML list (booru.org)");
+
+    const GelbooruHtmlSource source(QStringLiteral("Banners"), QStringLiteral("https://steambanners.booru.org"));
+    const QVector<Post> posts = source.parseSearchResponse(kBooruOrgListing);
+    check("two posts, the repeated link once", posts.size() == 2, QString::number(posts.size()));
+    if (posts.size() == 2) {
+        const Post &p = posts.first();
+        equal("id", p.id, QStringLiteral("34141"));
+        equal("thumbnail", p.previewUrl, QStringLiteral(
+            "https://thumbs.booru.org/steambanners/thumbnails//5/thumbnail_01ca93e6c40f95ce6b824bafce53667211be6609.jpg"));
+        equal("image derived from it", p.fileUrl, QStringLiteral(
+            "https://img.booru.org/steambanners//images/5/01ca93e6c40f95ce6b824bafce53667211be6609.jpg"));
+        check("tags from the title", p.tags == QStringList({QStringLiteral("big"), QStringLiteral("sonic"),
+                                                            QStringLiteral("fan&game")}),
+              p.tags.join(QLatin1Char(' ')));
+        equal("rating", p.rating, QStringLiteral("s"));
+        check("score", p.score == 3);
+        equal("post page", p.postPageUrl,
+              QStringLiteral("https://steambanners.booru.org/index.php?page=post&s=view&id=34141"));
+        equal("a png thumbnail keeps .png", posts.at(1).fileUrl,
+              QStringLiteral("https://img.booru.org/steambanners//images/30/727fd9.png"));
+    }
+
+    // Self-hosted: relative thumbnail, single slashes.
+    const GelbooruHtmlSource selfHosted(QStringLiteral("Own"), QStringLiteral("https://own.example/booru"));
+    const QVector<Post> own = selfHosted.parseSearchResponse(
+        R"(<span class="thumb"><a href="index.php?page=post&s=view&id=7"><img src="thumbnails/12/thumbnail_abc.gif" title="x rating:Explicit"></a></span>)");
+    check("relative thumbnail made absolute", own.size() == 1
+              && own.first().previewUrl == QStringLiteral("https://own.example/booru/thumbnails/12/thumbnail_abc.gif"),
+          own.isEmpty() ? QString() : own.first().previewUrl);
+    check("self-hosted image address", !own.isEmpty()
+              && own.first().fileUrl == QStringLiteral("https://own.example/booru/images/12/abc.gif"),
+          own.isEmpty() ? QString() : own.first().fileUrl);
+    check("an unknown thumbnail layout gives no file", GelbooruHtmlSource::imageUrlForThumbnail(
+        QStringLiteral("https://cdn.example/t/abc.jpg")).isEmpty());
+
+    const QUrlQuery first(source.buildSearchRequest(QString(), 1, 40).url());
+    const QUrlQuery third(source.buildSearchRequest(QStringLiteral("cat"), 3, 40).url());
+    equal("empty search lists all", first.queryItemValue(QStringLiteral("tags")), QStringLiteral("all"));
+    equal("page 1 at offset 0", first.queryItemValue(QStringLiteral("pid")), QStringLiteral("0"));
+    equal("page 3 at offset 40", third.queryItemValue(QStringLiteral("pid")), QStringLiteral("40"));
+}
+
+void testSiteAccess()
+{
+    begin("A pasted cookie and User-Agent go with every request to that site");
+
+    QHash<QString, SiteAccess::Credentials> byHost;
+    byHost.insert(QStringLiteral("www.protected.example"), {QStringLiteral("cf_clearance=abc"), QStringLiteral("Mozilla/5.0 Test")});
+    SiteAccess::setAll(byHost);
+
+    const auto sent = [](const QString &url) {
+        QNetworkRequest request{QUrl(url)};
+        request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("blairqt"));
+        SiteAccess::apply(request);
+        return QString::fromUtf8(request.rawHeader("Cookie")) + QLatin1Char('|')
+            + request.header(QNetworkRequest::UserAgentHeader).toString();
+    };
+    equal("the site", sent(QStringLiteral("https://protected.example/posts.json")),
+          QStringLiteral("cf_clearance=abc|Mozilla/5.0 Test"));
+    equal("its www. form", sent(QStringLiteral("https://www.protected.example/")),
+          QStringLiteral("cf_clearance=abc|Mozilla/5.0 Test"));
+    equal("a subdomain (thumbnails, images)", sent(QStringLiteral("https://cdn.protected.example/t/1.jpg")),
+          QStringLiteral("cf_clearance=abc|Mozilla/5.0 Test"));
+    equal("another site gets nothing", sent(QStringLiteral("https://safebooru.org/")), QStringLiteral("|blairqt"));
+    equal("not by the top-level domain", sent(QStringLiteral("https://other.org/")), QStringLiteral("|blairqt"));
+
+    SiteAccess::setAll({});
+    equal("cleared", sent(QStringLiteral("https://protected.example/")), QStringLiteral("|blairqt"));
 }
 
 } // namespace
@@ -1502,6 +1639,8 @@ int main(int argc, char **argv)
     testDetectorAddresses();
     testDetectorClues();
     testDetectorEndToEnd();
+    testGelbooruHtmlSource();
+    testSiteAccess();
     // Last: it changes the application palette.
     testTheme();
 

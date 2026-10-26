@@ -6,6 +6,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "SearchTab.h"
+#include "SiteAccess.h"
 #include "AddSourceDialog.h"
 #include "AppInfo.h"
 #include "Blacklist.h"
@@ -249,6 +250,7 @@ void SearchTab::fetchTagSuggestions()
 
     QNetworkRequest timedReq = req;
     timedReq.setTransferTimeout(5000);
+    SiteAccess::apply(timedReq);
     m_tagSuggestReply = m_network->get(timedReq);
     connect(m_tagSuggestReply, &QNetworkReply::finished, this, &SearchTab::onTagSuggestReplyFinished);
 }
@@ -668,6 +670,7 @@ void SearchTab::sendSearchRequest(const QSharedPointer<ISource> &source, QNetwor
     }
 
     request.setTransferTimeout(kSearchTimeoutMs);
+    SiteAccess::apply(request);
     NetworkLog::instance().log(QStringLiteral("GET %1").arg(NetworkLog::redactedUrl(request.url())));
 
     QNetworkReply *reply = m_network->get(request);
@@ -930,6 +933,7 @@ void SearchTab::showGalleryContextMenu(const QPoint &pos)
             QNetworkRequest req{QUrl(imageUrl)};
             req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
             req.setTransferTimeout(30000);
+            SiteAccess::apply(req);
             QNetworkReply *reply = m_network->get(req);
             connect(reply, &QNetworkReply::finished, this, [this, reply]() {
                 reply->deleteLater();

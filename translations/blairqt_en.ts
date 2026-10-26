@@ -178,7 +178,7 @@
         <translation>Python scripts (*.py)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="344"/>
+        <location filename="../src/AddSourceDialog.cpp" line="348"/>
         <source>Żaden znany mechanizm nie zadziałał pod tym adresem. Co odpowiedziała strona, widać w logu poniżej.</source>
         <translation>No known mechanism worked at this address. The log below shows what the site answered.</translation>
     </message>
@@ -198,7 +198,7 @@
         <translation>The site shows bot protection (%1) instead of its content. Open it in a browser, pass the check, copy the browser&apos;s cookie and User-Agent into the fields above and test again.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="339"/>
+        <location filename="../src/AddSourceDialog.cpp" line="343"/>
         <source>To booru na silniku Gelbooru bez API. Zaznacz &quot;Ta strona nie ma API (dapi)&quot;, uruchom most (python3 %1) i testuj ponownie.</source>
         <translation>This is a Gelbooru-engine booru without an API. Tick &quot;This site has no API (dapi)&quot;, start the bridge (python3 %1) and test again.</translation>
     </message>
@@ -206,6 +206,11 @@
         <location filename="../src/AddSourceDialog.cpp" line="327"/>
         <source>To nie jest adres strony - wpisz np. https://example-booru.com.</source>
         <translation>That is not a web address - enter e.g. https://example-booru.com.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="339"/>
+        <source>Strona odpowiada, że dostaje za dużo zapytań (HTTP 429). Odczekaj minutę i testuj ponownie.</source>
+        <translation>The site says it is getting too many requests (HTTP 429). Wait a minute and test again.</translation>
     </message>
 </context>
 <context>

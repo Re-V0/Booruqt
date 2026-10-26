@@ -47,6 +47,9 @@ private:
     void loadDefaults(const QString &onlyName = {});
     void loadUserSources();
     void saveUserSources() const;
+    // Hands the cookies and User-Agents of the user's sources to SiteAccess,
+    // so every request to those sites carries them.
+    void publishSiteAccess() const;
     void loadHiddenNames();
     void saveHiddenNames() const;
     // Replaces any existing source with the same display name.

@@ -6,6 +6,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "DownloadManager.h"
+#include "SiteAccess.h"
 #include "NetworkLog.h"
 #include "LibraryDatabase.h"
 #include "FolderAccessGuard.h"
@@ -144,6 +145,7 @@ void DownloadManager::download(const Post &post)
     QNetworkRequest req{QUrl(post.fileUrl)};
     req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
     req.setTransferTimeout(30000);
+    SiteAccess::apply(req);
 
     QNetworkReply *reply = m_manager->get(req);
     file->setParent(reply); // deleted together with the reply

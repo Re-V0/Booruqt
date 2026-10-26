@@ -36,6 +36,10 @@ class ISource;
 //    posts is asked again with a tag, since some engines return nothing for
 //    an empty search.
 //
+// Requests are spaced out (requestSpacing), since small sites answer a burst
+// with "429 Too Many Requests"; a 429 ends the detection at once rather
+// than making it worse.
+//
 // No message here is translated: the caller turns the facts it reports
 // (which engine, which tag, why nothing matched) into text.
 class SourceDetector : public QObject {
@@ -63,6 +67,8 @@ public:
         NeedsCredentials,
         // A Gelbooru-engine site whose API is off: the HTML bridge can read it.
         NeedsHtmlBridge,
+        // The site answered 429 Too Many Requests.
+        RateLimited,
         NothingMatched,
     };
 
@@ -94,6 +100,9 @@ public:
     // one runs abandons the first.
     void start(const Request &request);
 
+    // Milliseconds between two requests of one detection; 600 by default.
+    void setRequestSpacing(int milliseconds) { m_spacingMs = milliseconds; }
+
     // The base addresses to try for what the user typed, best first. Empty
     // when it cannot be a web address.
     static QStringList candidateBaseUrls(const QString &typed);
@@ -114,6 +123,7 @@ private:
     void onFrontPageFinished(QNetworkReply *reply);
     void probeNext();
     void sendProbe(QNetworkRequest request, const QString &flavor);
+    void sendProbeNow(QNetworkRequest request, const QString &flavor);
     void onProbeFinished(QNetworkReply *reply, const QString &flavor);
     void onProbeParsed(const QString &flavor, int httpStatus, const QByteArray &body,
                        const QVector<Post> &posts);
@@ -123,6 +133,7 @@ private:
     QNetworkAccessManager *m_network;
     // Bumped by start(); answers of an abandoned detection are ignored.
     int m_generation = 0;
+    int m_spacingMs = 600;
 
     Request m_request;
     QStringList m_candidates;
@@ -141,4 +152,5 @@ private:
     QString m_blocker;
     QString m_credentialsFlavor;
     bool m_gelbooruListing = false;
+    bool m_rateLimited = false;
 };

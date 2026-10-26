@@ -54,6 +54,10 @@ add_executable(blairqt
     src/sources/SzurubooruSource.cpp
     src/sources/ShimmieSource.h
     src/sources/ShimmieSource.cpp
+    src/sources/GelbooruHtmlSource.h
+    src/sources/GelbooruHtmlSource.cpp
+    src/SiteAccess.h
+    src/SiteAccess.cpp
     src/sources/PythonPluginSource.h
     src/sources/PythonPluginSource.cpp
     src/NetworkLog.h
@@ -177,6 +181,10 @@ add_custom_target(blairqt_plugin_runner ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}
 add_dependencies(blairqt blairqt_plugin_runner)
 install(FILES resources/plugin_runner.py DESTINATION ${BLAIRQT_INSTALL_DATA_DIR})
 install(PROGRAMS tools/html_scrape_bridge.py DESTINATION ${BLAIRQT_INSTALL_DATA_DIR}/tools)
+# Example plugins: the "Add custom booru" file dialog opens here, and a
+# source whose saved script path is gone falls back to the one here.
+install(DIRECTORY examples/ DESTINATION ${BLAIRQT_INSTALL_DATA_DIR}/examples
+    FILES_MATCHING PATTERN "*.py" PATTERN "__pycache__" EXCLUDE)
 
 if(LRELEASE_EXECUTABLE)
     set(BLAIRQT_QM_FILES)
@@ -219,6 +227,8 @@ if(BUILD_TESTING)
         src/sources/PhilomenaSource.cpp
         src/sources/SzurubooruSource.cpp
         src/sources/ShimmieSource.cpp
+        src/sources/GelbooruHtmlSource.cpp
+        src/SiteAccess.cpp
         src/sources/PythonPluginSource.cpp
         src/NetworkLog.cpp
         src/ThumbnailLoader.cpp

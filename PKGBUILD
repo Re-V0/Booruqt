@@ -8,6 +8,8 @@ url="https://gitlab.com/re-v0/blairqt"
 license=('MPL-2.0')
 depends=('qt6-base')
 optdepends=('python: run Python-scripted source plugins ("python" flavor)'
+            'python-requests: Newgrounds example plugin'
+            'python-argon2-cffi: Newgrounds example plugin'
             'python-flask: HTML-scrape bridge (tools/html_scrape_bridge.py)'
             'python-cloudscraper: HTML-scrape bridge'
             'python-beautifulsoup4: HTML-scrape bridge')

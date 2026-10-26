@@ -8,12 +8,14 @@
 #include "SourceDetector.h"
 #include "AppInfo.h"
 #include "NetworkLog.h"
+#include "SiteAccess.h"
 #include "SourceManager.h"
 #include "sources/ISource.h"
 
 #include <QFutureWatcher>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QTimer>
 #include <QUrl>
 #include <QtConcurrent/QtConcurrent>
 
@@ -141,6 +143,9 @@ SourceDetector::PageClues SourceDetector::readFrontPage(const QByteArray &html)
         {QStringLiteral("shimmie"), {QStringLiteral("shimmie"), QStringLiteral("/post/view/"),
                                      QStringLiteral("q=post/list"), QStringLiteral("q=post/view")}},
         {QStringLiteral("gelbooru"), {QStringLiteral("index.php?page=post"), QStringLiteral("gelbooru")}},
+        // Gelbooru 0.1 (booru.org) has no API; its HTML list is read instead.
+        {QStringLiteral("gelbooru-html"), {QStringLiteral("index.php?page=post"), QStringLiteral("gelbooru"),
+                                           QStringLiteral("booru.org")}},
         {QStringLiteral("moebooru"), {QStringLiteral("/post/show/"), QStringLiteral("moebooru")}},
         {QStringLiteral("danbooru"), {QStringLiteral("danbooru"), QStringLiteral("/posts?tags="),
                                       QStringLiteral("/posts/")}},
@@ -180,6 +185,7 @@ void SourceDetector::start(const Request &request)
     m_blocker.clear();
     m_credentialsFlavor.clear();
     m_gelbooruListing = false;
+    m_rateLimited = false;
     m_candidateIndex = 0;
 
     // A plugin decides itself what its base address means.
@@ -204,11 +210,15 @@ void SourceDetector::start(const Request &request)
 QNetworkRequest SourceDetector::withUserAgent(const QUrl &url) const
 {
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader,
-                      m_request.userAgent.isEmpty() ? blairqtUserAgent() : m_request.userAgent);
+    request.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
+    request.setTransferTimeout(kProbeTimeoutMs);
+    // A cookie saved with an existing source for this site, then what was
+    // typed in the dialog, which wins.
+    SiteAccess::apply(request);
+    if (!m_request.userAgent.isEmpty())
+        request.setHeader(QNetworkRequest::UserAgentHeader, m_request.userAgent);
     if (!m_request.cookie.isEmpty())
         request.setRawHeader("Cookie", m_request.cookie.toUtf8());
-    request.setTransferTimeout(kProbeTimeoutMs);
     return request;
 }
 
@@ -364,7 +374,28 @@ void SourceDetector::sendProbe(QNetworkRequest request, const QString &flavor)
         return;
     }
 
+    // Every probe follows another request (the front page, or a probe
+    // before it), so each one waits its turn.
+    if (m_spacingMs <= 0) {
+        sendProbeNow(request, flavor);
+        return;
+    }
+    const int generation = m_generation;
+    QTimer::singleShot(m_spacingMs, this, [this, request, flavor, generation]() {
+        if (generation == m_generation)
+            sendProbeNow(request, flavor);
+    });
+}
+
+void SourceDetector::sendProbeNow(QNetworkRequest request, const QString &flavor)
+{
     request.setTransferTimeout(kProbeTimeoutMs);
+    // The same cookie and User-Agent as the front page, whatever the engine.
+    SiteAccess::apply(request);
+    if (!m_request.userAgent.isEmpty())
+        request.setHeader(QNetworkRequest::UserAgentHeader, m_request.userAgent);
+    if (!m_request.cookie.isEmpty())
+        request.setRawHeader("Cookie", m_request.cookie.toUtf8());
     const QString shownUrl = NetworkLog::redactedUrl(request.url());
     emit logLine(QStringLiteral("[%1] GET %2").arg(flavor, shownUrl));
     NetworkLog::instance().log(QStringLiteral("(source test) GET %1").arg(shownUrl));
@@ -423,10 +454,21 @@ void SourceDetector::onProbeParsed(const QString &flavor, int httpStatus, const 
         return;
     }
 
-    // An API path behind the same protection as the front page.
+    // Asking further only makes the limit last longer.
+    if (httpStatus == 429) {
+        m_rateLimited = true;
+        emit logLine(QStringLiteral("  -> too many requests; stopping here"));
+        finishWith(Result());
+        return;
+    }
+
+    // An API path behind the same protection as the front page, or the
+    // site's HTML post list where its API should be.
     const PageClues clues = readFrontPage(body);
     if (!clues.blocker.isEmpty() && m_blocker.isEmpty())
         m_blocker = clues.blocker;
+    if (clues.gelbooruListing)
+        m_gelbooruListing = true;
     if (m_credentialsFlavor.isEmpty() && asksForCredentials(httpStatus, body))
         m_credentialsFlavor = flavor;
 
@@ -445,6 +487,8 @@ void SourceDetector::finishWith(Result result)
         if (!m_blocker.isEmpty()) {
             result.failure = Failure::Blocked;
             result.blocker = m_blocker;
+        } else if (m_rateLimited) {
+            result.failure = Failure::RateLimited;
         } else if (!m_credentialsFlavor.isEmpty()) {
             result.failure = Failure::NeedsCredentials;
             result.credentialsFlavor = m_credentialsFlavor;

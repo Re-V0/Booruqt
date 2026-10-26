@@ -11,6 +11,7 @@
 
 #include <QProcess>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QUrl>
 #include <QStandardPaths>
@@ -60,10 +61,20 @@ QString PythonPluginSource::runnerScriptPath()
 
 QJsonDocument PythonPluginSource::runPlugin(const QString &mode, const QJsonObject &stdinJson) const
 {
-    if (!QFile::exists(m_scriptPath)) {
-        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: script not found: %2")
-            .arg(m_name, m_scriptPath));
-        return {};
+    // A source saved on another machine, or before the files moved, points
+    // at a path that is gone. An example plugin of the same name that came
+    // with the program is the one the user meant.
+    QString scriptPath = m_scriptPath;
+    if (!QFile::exists(scriptPath)) {
+        const QString bundled = findAppFile(QStringLiteral("examples/") + QFileInfo(m_scriptPath).fileName());
+        if (QFileInfo(m_scriptPath).fileName().isEmpty() || !QFile::exists(bundled)) {
+            NetworkLog::instance().log(QStringLiteral("  -> PLUGIN ERROR [%1]: script not found: %2")
+                .arg(m_name, m_scriptPath));
+            return {};
+        }
+        NetworkLog::instance().log(QStringLiteral("  -> PLUGIN [%1]: %2 is gone, using the bundled %3")
+            .arg(m_name, m_scriptPath, bundled));
+        scriptPath = bundled;
     }
 
     const QStringList python = pythonCommand();
@@ -75,7 +86,7 @@ QJsonDocument PythonPluginSource::runPlugin(const QString &mode, const QJsonObje
     }
 
     QStringList arguments = python.mid(1);
-    arguments << runnerScriptPath() << m_scriptPath << mode;
+    arguments << runnerScriptPath() << scriptPath << mode;
 
     QProcess process;
     process.start(python.first(), arguments);

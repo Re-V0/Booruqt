@@ -18,6 +18,8 @@
 #include "sources/DanbooruSource.h"
 #include "sources/GelbooruSource.h"
 #include "sources/ShimmieSource.h"
+#include "sources/GelbooruHtmlSource.h"
+#include "SiteAccess.h"
 #include "sources/MoebooruSource.h"
 #include "sources/E621Source.h"
 #include "sources/PhilomenaSource.h"
@@ -53,6 +55,8 @@ QSharedPointer<ISource> SourceManager::createSource(const QString &name, const Q
         return QSharedPointer<SzurubooruSource>::create(name, baseUrl, apiKey, userId);
     if (flavor == QStringLiteral("shimmie"))
         return QSharedPointer<ShimmieSource>::create(name, baseUrl);
+    if (flavor == QStringLiteral("gelbooru-html"))
+        return QSharedPointer<GelbooruHtmlSource>::create(name, baseUrl);
     if (flavor == QStringLiteral("python")) {
         if (scriptPath.isEmpty())
             return {};
@@ -66,6 +70,7 @@ QStringList SourceManager::knownFlavors()
     return {
         QStringLiteral("danbooru"),
         QStringLiteral("gelbooru"),
+        QStringLiteral("gelbooru-html"),
         QStringLiteral("moebooru"),
         QStringLiteral("e621"),
         QStringLiteral("philomena"),
@@ -157,6 +162,22 @@ void SourceManager::loadUserSources()
         if (source)
             upsertSource(source);
     }
+    publishSiteAccess();
+}
+
+void SourceManager::publishSiteAccess() const
+{
+    QHash<QString, SiteAccess::Credentials> byHost;
+    for (const QJsonValue &v : m_userSourcesJson) {
+        const QJsonObject o = v.toObject();
+        SiteAccess::Credentials credentials;
+        credentials.cookie = o.value(QStringLiteral("cookie")).toString();
+        credentials.userAgent = o.value(QStringLiteral("userAgent")).toString();
+        if (credentials.cookie.isEmpty() && credentials.userAgent.isEmpty())
+            continue;
+        byHost.insert(SiteAccess::hostOf(o.value(QStringLiteral("baseUrl")).toString()), credentials);
+    }
+    SiteAccess::setAll(byHost);
 }
 
 void SourceManager::upsertSource(const QSharedPointer<ISource> &source)
@@ -202,6 +223,7 @@ void SourceManager::saveUserSources() const
 {
     // Holds API keys and session cookies.
     writeJsonAtomically(userSourcesFilePath(), QJsonDocument(m_userSourcesJson), /*ownerOnly=*/true);
+    publishSiteAccess();
 }
 
 void SourceManager::addCustomSource(const QString &name, const QString &flavor, const QString &baseUrl,

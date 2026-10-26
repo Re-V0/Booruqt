@@ -6,6 +6,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "ThumbnailLoader.h"
+#include "SiteAccess.h"
 #include "AppInfo.h"
 
 #include <QNetworkAccessManager>
@@ -42,6 +43,7 @@ void ThumbnailLoader::request(int row, const QUrl &url)
     req.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
     req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
     req.setTransferTimeout(15000);
+    SiteAccess::apply(req);
 
     QNetworkReply *reply = m_manager->get(req);
     m_pendingRows.insert(reply, row);

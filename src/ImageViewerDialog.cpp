@@ -6,6 +6,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "ImageViewerDialog.h"
+#include "SiteAccess.h"
 #include "AppInfo.h"
 
 #include <QLabel>
@@ -49,6 +50,7 @@ ImageViewerDialog::ImageViewerDialog(const QString &imageUrl, const QString &tit
     QNetworkRequest req{QUrl(imageUrl)};
     req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
     req.setTransferTimeout(30000);
+    SiteAccess::apply(req);
 
     QNetworkReply *reply = m_network->get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {

@@ -178,7 +178,7 @@
         <translation>Python-Skripte (*.py)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="344"/>
+        <location filename="../src/AddSourceDialog.cpp" line="348"/>
         <source>Żaden znany mechanizm nie zadziałał pod tym adresem. Co odpowiedziała strona, widać w logu poniżej.</source>
         <translation>Kein bekannter Mechanismus hat unter dieser Adresse funktioniert. Was die Seite geantwortet hat, steht im Log unten.</translation>
     </message>
@@ -198,7 +198,7 @@
         <translation>Die Seite zeigt einen Bot-Schutz (%1) statt ihres Inhalts. Öffne sie im Browser, bestehe die Prüfung, kopiere Cookie und User-Agent des Browsers in die Felder oben und teste erneut.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="339"/>
+        <location filename="../src/AddSourceDialog.cpp" line="343"/>
         <source>To booru na silniku Gelbooru bez API. Zaznacz &quot;Ta strona nie ma API (dapi)&quot;, uruchom most (python3 %1) i testuj ponownie.</source>
         <translation>Das ist ein Booru mit Gelbooru-Engine ohne API. Aktiviere &quot;Diese Seite hat keine API (dapi)&quot;, starte die Brücke (python3 %1) und teste erneut.</translation>
     </message>
@@ -206,6 +206,11 @@
         <location filename="../src/AddSourceDialog.cpp" line="327"/>
         <source>To nie jest adres strony - wpisz np. https://example-booru.com.</source>
         <translation>Das ist keine Webadresse - gib z. B. https://example-booru.com ein.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="339"/>
+        <source>Strona odpowiada, że dostaje za dużo zapytań (HTTP 429). Odczekaj minutę i testuj ponownie.</source>
+        <translation>Die Seite meldet zu viele Anfragen (HTTP 429). Warte eine Minute und teste erneut.</translation>
     </message>
 </context>
 <context>

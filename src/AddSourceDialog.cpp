@@ -246,8 +246,11 @@ QString AddSourceDialog::scriptPath() const { return m_scriptPathEdit->text(); }
 
 void AddSourceDialog::browseForScript()
 {
+    // The examples that came with the program are the likely first pick.
+    const QString examples = findAppFile(QStringLiteral("examples"));
     const QString path = QFileDialog::getOpenFileName(this, tr("Wybierz skrypt pluginu"),
-                                                        QString(), tr("Skrypty Python (*.py)"));
+                                                        QDir(examples).exists() ? examples : QString(),
+                                                        tr("Skrypty Python (*.py)"));
     if (path.isEmpty())
         return;
     m_scriptPathEdit->setText(path);
@@ -334,6 +337,10 @@ void AddSourceDialog::onDetectionFinished(const SourceDetector::Result &result)
     case SourceDetector::Failure::NeedsCredentials:
         m_resultLabel->setText(tr("Mechanizm %1 odpowiada, ale wymaga klucza: wpisz API key i User ID z "
                                   "ustawień konta na tej stronie i testuj ponownie.").arg(result.credentialsFlavor));
+        break;
+    case SourceDetector::Failure::RateLimited:
+        m_resultLabel->setText(tr("Strona odpowiada, że dostaje za dużo zapytań (HTTP 429). Odczekaj minutę "
+                                  "i testuj ponownie."));
         break;
     case SourceDetector::Failure::NeedsHtmlBridge:
         m_resultLabel->setText(tr("To booru na silniku Gelbooru bez API. Zaznacz \"Ta strona nie ma API "
