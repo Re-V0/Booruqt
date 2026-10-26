@@ -1394,7 +1394,7 @@ void testDetectorEndToEnd()
         // that answered in its own format is asked again.
         RouteServer server([](const QString &path, const QUrlQuery &query) {
             if (path == QStringLiteral("/index.php") && query.queryItemValue(QStringLiteral("page")) == QStringLiteral("dapi")) {
-                return data(query.queryItemValue(QStringLiteral("tags")) == QStringLiteral("all") ? kGelbooruPosts : "[]");
+                return data(query.queryItemValue(QStringLiteral("tags")) == QStringLiteral("all") ? kGelbooruPosts : QByteArray("[]"));
             }
             return RouteServer::Answer();
         });
