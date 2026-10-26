@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(blairqt VERSION 1.0.0 LANGUAGES CXX)
+project(blairqt VERSION 1.0.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -262,6 +262,8 @@ endif()
 # (package dpkg-dev); the SQLite driver is a Qt plugin, which shlibdeps
 # cannot see, so it is listed by hand.
 set(CPACK_PACKAGE_NAME "blairqt")
+# CPack would build the version from major.minor.patch only.
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VENDOR "re-v0")
 set(CPACK_PACKAGE_CONTACT "re-v0 <bird_of_hermes77@disroot.org>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Native Qt6 booru gallery client with a local, tag-indexed library")
