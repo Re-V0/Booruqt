@@ -4,57 +4,57 @@
 <context>
     <name>AddSourceDialog</name>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="130"/>
+        <location filename="../src/AddSourceDialog.cpp" line="114"/>
         <source>Adres URL:</source>
         <translation>URL:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="132"/>
+        <location filename="../src/AddSourceDialog.cpp" line="116"/>
         <source>API key:</source>
         <translation>API key:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="65"/>
+        <location filename="../src/AddSourceDialog.cpp" line="53"/>
         <source>Dodaj własne booru</source>
         <translation>Add custom booru</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="208"/>
+        <location filename="../src/AddSourceDialog.cpp" line="217"/>
         <source>Gelbooru wymaga darmowego konta: My Account -&gt; Options -&gt; API Access Credentials, skopiuj tam api_key i user_id i wklej poniżej.</source>
         <translation>Gelbooru requires a free account: My Account -&gt; Options -&gt; API Access Credentials, copy your api_key and user_id from there and paste them below.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="131"/>
+        <location filename="../src/AddSourceDialog.cpp" line="115"/>
         <source>Mechanizm:</source>
         <translation>Mechanism:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="129"/>
+        <location filename="../src/AddSourceDialog.cpp" line="113"/>
         <source>Nazwa:</source>
         <translation>Name:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="81"/>
+        <location filename="../src/AddSourceDialog.cpp" line="69"/>
         <source>np. MojeBooru</source>
         <translation>e.g. MyBooru</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="93"/>
+        <location filename="../src/AddSourceDialog.cpp" line="81"/>
         <source>opcjonalnie (np. Gelbooru api_key)</source>
         <translation>optional (e.g. Gelbooru api_key)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="95"/>
+        <location filename="../src/AddSourceDialog.cpp" line="83"/>
         <source>opcjonalnie (np. Gelbooru user_id)</source>
         <translation>optional (e.g. Gelbooru user_id)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="99"/>
+        <location filename="../src/AddSourceDialog.cpp" line="87"/>
         <source>opcjonalnie - cf_clearance=... (do stron za Cloudflare)</source>
         <translation>optional - cf_clearance=... (for sites behind Cloudflare)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="101"/>
+        <location filename="../src/AddSourceDialog.cpp" line="89"/>
         <source>opcjonalnie - User-Agent Twojej przeglądarki (musi pasować do cookie)</source>
         <translation>optional - your browser&apos;s User-Agent (must match the cookie)</translation>
     </message>
@@ -63,124 +63,149 @@
         <translation type="vanished">This site has no API (dapi) - scrape HTML through a local bridge (run html_scrape_bridge.py)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="134"/>
+        <location filename="../src/AddSourceDialog.cpp" line="118"/>
         <source>Cookie:</source>
         <translation>Cookie:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="135"/>
+        <location filename="../src/AddSourceDialog.cpp" line="119"/>
         <source>User-Agent:</source>
         <translation>User-Agent:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="264"/>
+        <location filename="../src/AddSourceDialog.cpp" line="272"/>
         <source>Podaj nazwę i adres URL.</source>
         <translation>Enter a name and a URL.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="299"/>
+        <location filename="../src/AddSourceDialog.cpp" line="321"/>
         <source>Skrypt pluginu nie zadziałał - sprawdź log poniżej.</source>
         <translation>The plugin script failed - check the log below.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="317"/>
+        <location filename="../src/AddSourceDialog.cpp" line="298"/>
         <source>Próbuję mechanizmu: %1 (%2/%3)...</source>
         <translation>Trying mechanism: %1 (%2/%3)...</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="318"/>
+        <location filename="../src/AddSourceDialog.cpp" line="299"/>
         <source>Próbuję mechanizmu: %1 z tagiem &quot;%2&quot; (%3/%4)...</source>
         <translation>Trying mechanism: %1 with tag &quot;%2&quot; (%3/%4)...</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="211"/>
+        <location filename="../src/AddSourceDialog.cpp" line="220"/>
         <source>Rule34.xxx też wymaga darmowego konta z wygenerowanym api_key i user_id (ustawienia konta na rule34.xxx) - wklej je poniżej.</source>
         <translation>Rule34.xxx also requires a free account with a generated api_key and user_id (account settings on rule34.xxx) - paste them below.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="79"/>
+        <location filename="../src/AddSourceDialog.cpp" line="67"/>
         <source>Szybki start:</source>
         <translation>Quick start:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="285"/>
+        <location filename="../src/AddSourceDialog.cpp" line="291"/>
         <source>Testowanie...</source>
         <translation>Testing...</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="141"/>
+        <location filename="../src/AddSourceDialog.cpp" line="125"/>
         <source>Testuj</source>
         <translation>Test</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="133"/>
+        <location filename="../src/AddSourceDialog.cpp" line="117"/>
         <source>User ID:</source>
         <translation>User ID:</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="69"/>
+        <location filename="../src/AddSourceDialog.cpp" line="57"/>
         <source>(wpisz ręcznie)</source>
         <translation>(enter manually)</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="86"/>
+        <location filename="../src/AddSourceDialog.cpp" line="74"/>
         <source>Wykryj automatycznie</source>
         <translation>Auto-detect</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="403"/>
+        <location filename="../src/AddSourceDialog.cpp" line="308"/>
         <source>Wykryto mechanizm: %1 - test OK (%2 postów).</source>
         <translation>Detected mechanism: %1 - test OK (%2 posts).</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="150"/>
+        <location filename="../src/AddSourceDialog.cpp" line="134"/>
         <source>Wyniki testu poszczególnych mechanizmów pojawią się tutaj...</source>
         <translation>Test results for each mechanism will appear here...</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="300"/>
-        <source>Żaden znany mechanizm nie zadziałał pod tym adresem. Sprawdź URL (musi wskazywać na stronę główną booru, nie na konkretny post).</source>
-        <translation>No known mechanism worked at this address. Check the URL (it must point to the booru&apos;s main page, not a specific post).</translation>
-    </message>
-    <message>
-        <location filename="../src/AddSourceDialog.cpp" line="117"/>
+        <location filename="../src/AddSourceDialog.cpp" line="101"/>
         <source>wymagane dla mechanizmu &quot;python&quot; - kliknij Wybierz...</source>
         <translation>required for the &quot;python&quot; mechanism - click Choose...</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="105"/>
+        <location filename="../src/AddSourceDialog.cpp" line="93"/>
         <source>Ta strona nie ma API (dapi) - scrapuj HTML przez lokalny most</source>
         <translation>This site has no API (dapi) - scrape HTML through a local bridge</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="111"/>
+        <location filename="../src/AddSourceDialog.cpp" line="95"/>
         <source>Uruchom go najpierw: python3 %1</source>
         <translation>Run it first: python3 %1</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="118"/>
+        <location filename="../src/AddSourceDialog.cpp" line="102"/>
         <source>Wybierz...</source>
         <translation>Choose...</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="124"/>
+        <location filename="../src/AddSourceDialog.cpp" line="108"/>
         <source>Uwaga: skrypt pluginu jest uruchamiany z pełnymi uprawnieniami Twojego konta - dodawaj tylko skrypty, którym ufasz.</source>
         <translation>Note: plugin scripts run with your full account permissions - only add scripts you trust.</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="137"/>
+        <location filename="../src/AddSourceDialog.cpp" line="121"/>
         <source>Skrypt pluginu (.py):</source>
         <translation>Plugin script (.py):</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="240"/>
+        <location filename="../src/AddSourceDialog.cpp" line="249"/>
         <source>Wybierz skrypt pluginu</source>
         <translation>Choose plugin script</translation>
     </message>
     <message>
-        <location filename="../src/AddSourceDialog.cpp" line="241"/>
+        <location filename="../src/AddSourceDialog.cpp" line="250"/>
         <source>Skrypty Python (*.py)</source>
         <translation>Python scripts (*.py)</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="344"/>
+        <source>Żaden znany mechanizm nie zadziałał pod tym adresem. Co odpowiedziała strona, widać w logu poniżej.</source>
+        <translation>No known mechanism worked at this address. The log below shows what the site answered.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="313"/>
+        <source>Adres ustawiony na %1.</source>
+        <translation>Address set to %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="335"/>
+        <source>Mechanizm %1 odpowiada, ale wymaga klucza: wpisz API key i User ID z ustawień konta na tej stronie i testuj ponownie.</source>
+        <translation>Mechanism %1 answers but needs a key: enter the API key and User ID from your account settings on that site and test again.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="330"/>
+        <source>Strona pokazuje ochronę przed botami (%1) zamiast treści. Otwórz ją w przeglądarce, przejdź weryfikację, skopiuj z przeglądarki cookie i User-Agent do pól powyżej i testuj ponownie.</source>
+        <translation>The site shows bot protection (%1) instead of its content. Open it in a browser, pass the check, copy the browser&apos;s cookie and User-Agent into the fields above and test again.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="339"/>
+        <source>To booru na silniku Gelbooru bez API. Zaznacz &quot;Ta strona nie ma API (dapi)&quot;, uruchom most (python3 %1) i testuj ponownie.</source>
+        <translation>This is a Gelbooru-engine booru without an API. Tick &quot;This site has no API (dapi)&quot;, start the bridge (python3 %1) and test again.</translation>
+    </message>
+    <message>
+        <location filename="../src/AddSourceDialog.cpp" line="327"/>
+        <source>To nie jest adres strony - wpisz np. https://example-booru.com.</source>
+        <translation>That is not a web address - enter e.g. https://example-booru.com.</translation>
     </message>
 </context>
 <context>

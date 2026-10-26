@@ -24,6 +24,9 @@ struct Post {
     QString fileUrl;
     QString postPageUrl;
     QString artistSourceUrl;
+    // The file's extension, for sites whose fileUrl has none of its own
+    // (Shimmie2 CDNs serve "/ab/cd/<md5>"). Empty when fileUrl has one.
+    QString fileExtension;
 
     // Set only for library posts: the downloaded file's path on disk and the
     // database row id, which paging uses as a stable cursor.

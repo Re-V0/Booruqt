@@ -16,7 +16,7 @@ SQLite index next to the files. Delete the database and the files are still
 there, still sorted, still openable by anything else on the system.
 
 Boorus that are not on the list are usually one URL away: the app probes the
-site against six engines and picks the one that fits. Anything else takes a
+site against seven engines and picks the one that fits. Anything else takes a
 short Python plugin — or, for sites with no API at all, the bundled
 HTML-scrape bridge.
 
@@ -96,9 +96,17 @@ blacklist a tag.
 
 ## Sources
 
-Six generic parsers — Danbooru, Gelbooru/dapi, Moebooru, e621, Philomena,
-Szurubooru — cover dozens of sites without a class per site. **Add custom
-booru** probes a URL and works out which one fits.
+Seven generic parsers — Danbooru, Gelbooru/dapi, Moebooru, e621, Philomena,
+Szurubooru, Shimmie2 — cover dozens of sites without a class per site.
+
+**Add custom booru** works out which one fits from any address of the site:
+its front page, a post or a search, with or without `https://`. It reads the
+front page for the engine's traces and asks that engine first, then the
+others; it follows a redirect to `https` or `www.`, and keeps a booru
+installed in a subfolder. When nothing fits it says why, if it can tell: a
+bot protection page (Cloudflare, Anubis, DDoS-Guard) in the way, an API that
+wants a key, or a Gelbooru-engine site with its API turned off, which the
+HTML-scrape bridge below can still read.
 
 Several sources can be merged into one gallery. Paging, infinite scroll and
 autoscroll are three ways to move through results; picking one disables the
@@ -203,9 +211,10 @@ ctest --test-dir build --output-on-failure
 ```
 
 They cover blacklist matching, tag input, response parsing for every engine,
-the library (whole-tag search, paging, moving files, upgrading an older
-database), downloads, thumbnail loading, themes, the source list, and the rule
-that a plugin never blocks the GUI thread.
+source detection (against a local server playing each engine), the library
+(whole-tag search, paging, moving files, upgrading an older database),
+downloads, thumbnail loading, themes, the source list, and the rule that a
+plugin never blocks the GUI thread.
 
 ## Data locations
 

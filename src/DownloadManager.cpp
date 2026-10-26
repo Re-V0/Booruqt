@@ -70,13 +70,17 @@ QString DownloadManager::sidecarPathFor(const QString &imagePath)
 
 QString DownloadManager::targetFilePath(const Post &post) const
 {
+    // The extension, source and id all come from the site or a plugin, and
+    // a "/" in any of them would point the file into a folder that does not
+    // exist.
+    static const QRegularExpression unsafe(QStringLiteral("[^A-Za-z0-9_.-]"));
+
     QString ext = QFileInfo(QUrl(post.fileUrl).path()).suffix();
     if (ext.isEmpty() || ext.size() > 5)
+        ext = post.fileExtension;
+    if (ext.isEmpty() || ext.size() > 5)
         ext = QStringLiteral("jpg");
-
-    // The id too: a plugin may return any string, and a "/" in it would point
-    // the file into a folder that does not exist.
-    static const QRegularExpression unsafe(QStringLiteral("[^A-Za-z0-9_.-]"));
+    ext.replace(unsafe, QStringLiteral("_"));
     const QString safeSource = QString(post.sourceName).replace(unsafe, QStringLiteral("_"));
     const QString safeId = QString(post.id).replace(unsafe, QStringLiteral("_"));
     const QString fileName = QStringLiteral("%1_%2.%3").arg(safeSource, safeId, ext);

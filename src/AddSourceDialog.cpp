@@ -22,26 +22,12 @@
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QFileDialog>
 #include <QDir>
-#include <QFutureWatcher>
-#include <QtConcurrent/QtConcurrent>
 
 namespace {
-constexpr int kProbeTimeoutMs = 8000;
 // Address of the manually-started html_scrape_bridge.py.
 const QString kDefaultHtmlBridgeUrl = QStringLiteral("http://127.0.0.1:8765");
-
-// Tried in order until one parses: an empty query, then "all" (what the
-// Gelbooru-engine forks use for "everything"), then a common anime tag as a
-// last resort for sites that answer nothing to either.
-const QStringList &probeTags()
-{
-    static const QStringList tags = {QString(), QStringLiteral("all"), QStringLiteral("1girl")};
-    return tags;
-}
 
 // name is also the pre-filled "Nazwa" field; hint text lives in hintForIndex().
 struct SourcePreset {
@@ -62,7 +48,7 @@ const QVector<SourcePreset> &sourcePresets()
 }
 
 AddSourceDialog::AddSourceDialog(QWidget *parent)
-    : QDialog(parent), m_probeNetwork(new QNetworkAccessManager(this))
+    : QDialog(parent), m_detector(new SourceDetector(this))
 {
     setWindowTitle(tr("Dodaj własne booru"));
     setMinimumWidth(420);
@@ -162,6 +148,9 @@ AddSourceDialog::AddSourceDialog(QWidget *parent)
     layout->addWidget(m_buttonBox);
 
     connect(m_testButton, &QPushButton::clicked, this, &AddSourceDialog::startTest);
+    connect(m_detector, &SourceDetector::probing, this, &AddSourceDialog::onProbing);
+    connect(m_detector, &SourceDetector::logLine, m_logEdit, &QPlainTextEdit::appendPlainText);
+    connect(m_detector, &SourceDetector::finished, this, &AddSourceDialog::onDetectionFinished);
     connect(m_buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(m_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -279,8 +268,7 @@ void AddSourceDialog::onHtmlBridgeToggled(bool checked)
 
 void AddSourceDialog::startTest()
 {
-    const QString url = normalizedBaseUrl();
-    if (sourceName().isEmpty() || url.isEmpty()) {
+    if (sourceName().isEmpty() || normalizedBaseUrl().isEmpty()) {
         m_resultLabel->setText(tr("Podaj nazwę i adres URL."));
         return;
     }
@@ -288,145 +276,73 @@ void AddSourceDialog::startTest()
     invalidateDetectedFlavor();
     m_logEdit->clear();
 
+    SourceDetector::Request request;
+    request.url = normalizedBaseUrl();
     // Index, not the label: keying control flow off translated text is fragile.
-    const QString chosen = m_flavorCombo->currentText();
-    if (m_flavorCombo->currentIndex() == 0) {
-        m_flavorsToTry = SourceManager::knownFlavors();
-        // Auto-detect skips "python" normally (needs a script) - include it if one is set.
-        if (!scriptPath().isEmpty())
-            m_flavorsToTry.append(QStringLiteral("python"));
-    } else {
-        m_flavorsToTry = QStringList{chosen};
-    }
-    m_tryIndex = 0;
-    m_probePass = 0;
+    request.flavor = m_flavorCombo->currentIndex() == 0 ? QString() : m_flavorCombo->currentText();
+    request.apiKey = apiKey();
+    request.userId = userId();
+    request.cookie = cookie();
+    request.userAgent = userAgent();
+    request.htmlBridgeUrl = htmlBridgeUrl();
+    request.scriptPath = scriptPath();
 
     setInputsEnabled(false);
     m_resultLabel->setText(tr("Testowanie..."));
-    tryNextFlavor();
+    m_detector->start(request);
 }
 
-void AddSourceDialog::tryNextFlavor()
+void AddSourceDialog::onProbing(const QString &flavor, int index, int total, const QString &tag)
 {
-    if (m_tryIndex >= m_flavorsToTry.size()) {
-        if (m_probePass + 1 < probeTags().size()) {
-            ++m_probePass;
-            m_tryIndex = 0;
-            m_logEdit->appendPlainText(QStringLiteral("(empty query didn't work anywhere - retrying with tag \"%1\")").arg(probeTags().at(m_probePass)));
-        } else {
-            setInputsEnabled(true);
-            m_resultLabel->setText(m_flavorsToTry == QStringList{QStringLiteral("python")}
-                ? tr("Skrypt pluginu nie zadziałał - sprawdź log poniżej.")
-                : tr("Żaden znany mechanizm nie zadziałał pod tym adresem. Sprawdź URL "
-                     "(musi wskazywać na stronę główną booru, nie na konkretny post)."));
-            return;
+    m_resultLabel->setText(tag.isEmpty()
+        ? tr("Próbuję mechanizmu: %1 (%2/%3)...").arg(flavor).arg(index).arg(total)
+        : tr("Próbuję mechanizmu: %1 z tagiem \"%2\" (%3/%4)...").arg(flavor, tag).arg(index).arg(total));
+}
+
+void AddSourceDialog::onDetectionFinished(const SourceDetector::Result &result)
+{
+    setInputsEnabled(true);
+
+    if (result.found) {
+        m_detectedFlavor = result.flavor;
+        QString text = tr("Wykryto mechanizm: %1 - test OK (%2 postów).")
+            .arg(m_detectedFlavor).arg(result.postCount);
+        // Saved as tested: the base address, not the post or search typed.
+        if (result.baseUrl != normalizedBaseUrl()) {
+            m_urlEdit->setText(result.baseUrl);
+            text += QLatin1Char(' ') + tr("Adres ustawiony na %1.").arg(result.baseUrl);
         }
-    }
-
-    const QString flavor = m_flavorsToTry.at(m_tryIndex);
-    m_probeSource = SourceManager::createSource(QStringLiteral("__probe__"), flavor, baseUrl(),
-                                                 apiKey(), userId(), cookie(), userAgent(), htmlBridgeUrl(),
-                                                 scriptPath());
-    if (!m_probeSource) {
-        ++m_tryIndex;
-        tryNextFlavor();
-        return;
-    }
-
-    m_resultLabel->setText(m_probePass == 0
-        ? tr("Próbuję mechanizmu: %1 (%2/%3)...").arg(flavor).arg(m_tryIndex + 1).arg(m_flavorsToTry.size())
-        : tr("Próbuję mechanizmu: %1 z tagiem \"%2\" (%3/%4)...")
-              .arg(flavor, probeTags().at(m_probePass)).arg(m_tryIndex + 1).arg(m_flavorsToTry.size()));
-
-    // Empty query = universal smoke test; one parseable post confirms the flavor.
-    const QString probeTag = probeTags().at(m_probePass);
-    const QSharedPointer<ISource> source = m_probeSource;
-
-    if (!source->mayBlock()) {
-        sendProbeRequest(source->buildSearchRequest(probeTag, 1, 5), flavor);
-        return;
-    }
-
-    // A plugin builds its URL by running python3; that would freeze the dialog.
-    auto *watcher = new QFutureWatcher<QNetworkRequest>(this);
-    connect(watcher, &QFutureWatcher<QNetworkRequest>::finished, this, [this, watcher, flavor]() {
-        watcher->deleteLater();
-        sendProbeRequest(watcher->result(), flavor);
-    });
-    watcher->setFuture(QtConcurrent::run([source, probeTag]() {
-        return source->buildSearchRequest(probeTag, 1, 5);
-    }));
-}
-
-void AddSourceDialog::sendProbeRequest(QNetworkRequest request, const QString &flavor)
-{
-    if (!request.url().isValid() || request.url().isEmpty()) {
-        m_logEdit->appendPlainText(QStringLiteral("[%1] no usable request was built").arg(flavor));
-        ++m_tryIndex;
-        tryNextFlavor();
-        return;
-    }
-
-    request.setTransferTimeout(kProbeTimeoutMs);
-    const QString shownUrl = NetworkLog::redactedUrl(request.url());
-    m_logEdit->appendPlainText(QStringLiteral("[%1] GET %2").arg(flavor, shownUrl));
-    NetworkLog::instance().log(QStringLiteral("(source test) GET %1").arg(shownUrl));
-
-    QNetworkReply *reply = m_probeNetwork->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, flavor]() {
-        onProbeReplyFinished(reply, flavor);
-    });
-}
-
-void AddSourceDialog::onProbeReplyFinished(QNetworkReply *reply, const QString &flavor)
-{
-    reply->deleteLater();
-
-    const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        handleProbeResult(flavor, httpStatus, {}, reply->errorString());
-        return;
-    }
-
-    const QByteArray data = reply->readAll();
-    const QSharedPointer<ISource> source = m_probeSource;
-
-    if (!source->mayBlock()) {
-        const QVector<Post> posts = source->parseSearchResponse(data);
-        handleProbeResult(flavor, httpStatus, posts,
-                          posts.isEmpty() ? QString::fromUtf8(data.left(200)).simplified() : QString());
-        return;
-    }
-
-    auto *watcher = new QFutureWatcher<QVector<Post>>(this);
-    connect(watcher, &QFutureWatcher<QVector<Post>>::finished, this, [this, watcher, flavor, httpStatus, data]() {
-        watcher->deleteLater();
-        const QVector<Post> posts = watcher->result();
-        handleProbeResult(flavor, httpStatus, posts,
-                          posts.isEmpty() ? QString::fromUtf8(data.left(200)).simplified() : QString());
-    });
-    watcher->setFuture(QtConcurrent::run([source, data]() {
-        return source->parseSearchResponse(data);
-    }));
-}
-
-void AddSourceDialog::handleProbeResult(const QString &flavor, int httpStatus, const QVector<Post> &posts,
-                                        const QString &snippet)
-{
-    m_logEdit->appendPlainText(QStringLiteral("  -> HTTP %1, %2 posts parsed%3")
-        .arg(httpStatus).arg(posts.size())
-        .arg(snippet.isEmpty() ? QString() : QStringLiteral(" | %1").arg(snippet)));
-
-    if (!posts.isEmpty()) {
-        m_detectedFlavor = flavor;
-        setInputsEnabled(true);
-        m_resultLabel->setText(tr("Wykryto mechanizm: %1 - test OK (%2 postów).")
-                                   .arg(m_detectedFlavor).arg(posts.size()));
+        m_resultLabel->setText(text);
         m_buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
         return;
     }
 
-    ++m_tryIndex;
-    tryNextFlavor();
+    if (m_flavorCombo->currentText() == QStringLiteral("python") && m_flavorCombo->currentIndex() != 0) {
+        m_resultLabel->setText(tr("Skrypt pluginu nie zadziałał - sprawdź log poniżej."));
+        return;
+    }
+
+    switch (result.failure) {
+    case SourceDetector::Failure::InvalidUrl:
+        m_resultLabel->setText(tr("To nie jest adres strony - wpisz np. https://example-booru.com."));
+        break;
+    case SourceDetector::Failure::Blocked:
+        m_resultLabel->setText(tr("Strona pokazuje ochronę przed botami (%1) zamiast treści. Otwórz ją w "
+                                  "przeglądarce, przejdź weryfikację, skopiuj z przeglądarki cookie i "
+                                  "User-Agent do pól powyżej i testuj ponownie.").arg(result.blocker));
+        break;
+    case SourceDetector::Failure::NeedsCredentials:
+        m_resultLabel->setText(tr("Mechanizm %1 odpowiada, ale wymaga klucza: wpisz API key i User ID z "
+                                  "ustawień konta na tej stronie i testuj ponownie.").arg(result.credentialsFlavor));
+        break;
+    case SourceDetector::Failure::NeedsHtmlBridge:
+        m_resultLabel->setText(tr("To booru na silniku Gelbooru bez API. Zaznacz \"Ta strona nie ma API "
+                                  "(dapi)\", uruchom most (python3 %1) i testuj ponownie.")
+                                   .arg(QDir::toNativeSeparators(findAppFile(QStringLiteral("tools/html_scrape_bridge.py")))));
+        break;
+    default:
+        m_resultLabel->setText(tr("Żaden znany mechanizm nie zadziałał pod tym adresem. Co odpowiedziała "
+                                  "strona, widać w logu poniżej."));
+        break;
+    }
 }

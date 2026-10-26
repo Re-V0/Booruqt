@@ -37,6 +37,8 @@ add_executable(blairqt
     src/SourceManager.cpp
     src/AddSourceDialog.h
     src/AddSourceDialog.cpp
+    src/SourceDetector.h
+    src/SourceDetector.cpp
     src/sources/ISource.h
     src/sources/DanbooruSource.h
     src/sources/DanbooruSource.cpp
@@ -50,6 +52,8 @@ add_executable(blairqt
     src/sources/PhilomenaSource.cpp
     src/sources/SzurubooruSource.h
     src/sources/SzurubooruSource.cpp
+    src/sources/ShimmieSource.h
+    src/sources/ShimmieSource.cpp
     src/sources/PythonPluginSource.h
     src/sources/PythonPluginSource.cpp
     src/NetworkLog.h
@@ -214,6 +218,7 @@ if(BUILD_TESTING)
         src/sources/E621Source.cpp
         src/sources/PhilomenaSource.cpp
         src/sources/SzurubooruSource.cpp
+        src/sources/ShimmieSource.cpp
         src/sources/PythonPluginSource.cpp
         src/NetworkLog.cpp
         src/ThumbnailLoader.cpp
@@ -221,6 +226,7 @@ if(BUILD_TESTING)
         src/DownloadManager.cpp
         src/FolderAccessGuard.cpp
         src/SourceManager.cpp
+        src/SourceDetector.cpp
         resources/resources.qrc
     )
     target_include_directories(blairqt_tests PRIVATE src)

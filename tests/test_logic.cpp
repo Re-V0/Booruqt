@@ -19,12 +19,14 @@
 #include "sources/E621Source.h"
 #include "sources/PhilomenaSource.h"
 #include "sources/SzurubooruSource.h"
+#include "sources/ShimmieSource.h"
 #include "sources/PythonPluginSource.h"
 #include "NetworkLog.h"
 #include "ThumbnailLoader.h"
 #include "ThemeManager.h"
 #include "DownloadManager.h"
 #include "SourceManager.h"
+#include "SourceDetector.h"
 #include "AppInfo.h"
 
 #include <QApplication>
@@ -44,6 +46,9 @@
 #include <QPalette>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QUrlQuery>
+#include <QEventLoop>
+#include <functional>
 #include <iostream>
 
 namespace {
@@ -900,6 +905,11 @@ private:
             const QByteArray body = "<html><body>Checking your browser...</body></html>";
             response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "
                 + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" + body;
+        } else if (firstLine.contains(" /cdn/ab/cd/abcdef ")) {
+            // A Shimmie2-style CDN path: no extension in the URL.
+            const QByteArray body = okBody();
+            response = "HTTP/1.1 200 OK\r\nContent-Type: image/webp\r\nContent-Length: "
+                + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" + body;
         } else if (firstLine.contains(" /cut.png ")) {
             response = "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: 100000\r\n\r\n0123456789";
         } else {
@@ -1052,6 +1062,410 @@ void testTheme()
     QFile::remove(path);
 }
 
+void testShimmieSource()
+{
+    begin("Shimmie2 source (Danbooru-compatible API)");
+
+    // As rule34.paheal.net answers: XML, no extension in file_url, rating "?".
+    const QByteArray xml =
+        "<?xml version='1.0' encoding='utf-8'?>\n"
+        "<posts count='483' offset='0'>"
+        "<post id='7001' md5='0123456789abcdef0123456789abcdef' file_name='0123456789abcdef0123456789abcdef.webp'"
+        " file_url='https://cdn.example/01/23/0123456789abcdef0123456789abcdef' height='900' width='1200'"
+        " preview_url='https://thumbs.example/01/23/0123456789abcdef0123456789abcdef'"
+        " preview_height='150' preview_width='200' rating='?' date='2026-10-01 12:00:00'"
+        " is_warehoused='false' tags='Cat_Noir tabby&amp;cat' source='' score='0' author='someone'/>"
+        "<post id='7002' md5='x' file_name='x.png' file_url='' preview_url='' rating='s' tags='' score='3'/>"
+        "</posts>";
+    const ShimmieSource source(QStringLiteral("Paheal"), QStringLiteral("https://shimmie.example"));
+    const QVector<Post> posts = source.parseSearchResponse(xml);
+    check("a post without a file is dropped", posts.size() == 1, QString::number(posts.size()));
+    if (!posts.isEmpty()) {
+        const Post &p = posts.first();
+        equal("id", p.id, QStringLiteral("7001"));
+        equal("file url kept as sent", p.fileUrl,
+              QStringLiteral("https://cdn.example/01/23/0123456789abcdef0123456789abcdef"));
+        equal("extension from file_name", p.fileExtension, QStringLiteral("webp"));
+        check("tags split, entities decoded",
+              p.tags == QStringList({QStringLiteral("Cat_Noir"), QStringLiteral("tabby&cat")}),
+              p.tags.join(QLatin1Char(' ')));
+        equal("\"?\" is no rating", p.rating, QString());
+        check("size", p.width == 1200 && p.height == 900);
+        equal("post page works without nice URLs", p.postPageUrl,
+              QStringLiteral("https://shimmie.example/index.php?q=post/view/7001"));
+    }
+
+    const QUrlQuery query(source.buildSearchRequest(QStringLiteral("cat -dog"), 3, 500).url());
+    equal("API through index.php?q=", query.queryItemValue(QStringLiteral("q")),
+          QStringLiteral("api/danbooru/find_posts"));
+    equal("page is 1-based", query.queryItemValue(QStringLiteral("page")), QStringLiteral("3"));
+    equal("limit capped at the API's 100", query.queryItemValue(QStringLiteral("limit")), QStringLiteral("100"));
+
+    // {"tag": {"newtag": alias or null, "count": N}}; keys arrive sorted by
+    // name, the result must be by use.
+    const QByteArray suggestions =
+        R"({"Cat_Noir":{"newtag":null,"count":5},"Catra":{"newtag":null,"count":50},)"
+        R"("Catgirl":{"newtag":"cat_girl","count":20}})";
+    check("suggestions by count, alias resolved",
+          source.parseTagSuggestions(suggestions)
+              == QStringList({QStringLiteral("Catra"), QStringLiteral("cat_girl"), QStringLiteral("Cat_Noir")}),
+          source.parseTagSuggestions(suggestions).join(QLatin1Char(' ')));
+    check("old plain-count suggestions",
+          source.parseTagSuggestions(R"({"a":1,"b":9})") == QStringList({QStringLiteral("b"), QStringLiteral("a")}));
+    check("shimmie is a known flavor", SourceManager::knownFlavors().contains(QStringLiteral("shimmie")));
+    check("SourceManager creates it",
+          !SourceManager::createSource(QStringLiteral("x"), QStringLiteral("shimmie"), QStringLiteral("https://a"))
+               .isNull());
+}
+
+void testDownloadExtensionHint()
+{
+    begin("A file URL without an extension is saved with the site's one");
+
+    QTemporaryDir dir;
+    TestHttpServer server;
+    DownloadManager manager(nullptr);
+    manager.setDownloadDir(dir.path());
+
+    Post post;
+    post.id = QStringLiteral("7001");
+    post.sourceName = QStringLiteral("Paheal");
+    post.fileUrl = server.url(QStringLiteral("/cdn/ab/cd/abcdef"));
+    post.fileExtension = QStringLiteral("webp");
+
+    QString savedPath;
+    bool finished = false;
+    QObject::connect(&manager, &DownloadManager::downloadFinished,
+                     [&](const QString &path, bool, bool, const QString &) {
+                         savedPath = path;
+                         finished = true;
+                     });
+    manager.download(post);
+    QElapsedTimer waited;
+    waited.start();
+    while (!finished && waited.elapsed() < 5000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    check("saved as .webp", savedPath.endsWith(QStringLiteral("/Paheal_7001.webp")), savedPath);
+
+    post.id = QStringLiteral("7002");
+    post.fileExtension = QStringLiteral("../x");
+    finished = false;
+    manager.download(post);
+    waited.restart();
+    while (!finished && waited.elapsed() < 5000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    check("a hostile extension stays inside the folder",
+          !savedPath.isEmpty() && QFileInfo(savedPath).absolutePath() == QDir(dir.path()).absolutePath(),
+          savedPath);
+}
+
+void testDetectorAddresses()
+{
+    begin("Source detection: what the user typed becomes a base address");
+
+    struct Case {
+        QString typed;
+        QStringList want;
+    };
+    const QVector<Case> cases = {
+        {QStringLiteral("safebooru.org"), {QStringLiteral("https://safebooru.org")}},
+        {QStringLiteral("  https://safebooru.org/  "), {QStringLiteral("https://safebooru.org")}},
+        {QStringLiteral("https://safebooru.org/index.php?page=post&s=view&id=5"), {QStringLiteral("https://safebooru.org")}},
+        {QStringLiteral("https://danbooru.donmai.us/posts/123?q=cat"), {QStringLiteral("https://danbooru.donmai.us")}},
+        {QStringLiteral("https://yande.re/post/show/12"), {QStringLiteral("https://yande.re")}},
+        {QStringLiteral("https://derpibooru.org/images/5"), {QStringLiteral("https://derpibooru.org")}},
+        {QStringLiteral("https://rule34.paheal.net/post/view/1"), {QStringLiteral("https://rule34.paheal.net")}},
+        {QStringLiteral("https://szuru.example/#/posts"), {QStringLiteral("https://szuru.example")}},
+        {QStringLiteral("HTTPS://Example.COM/Posts?tags=x"), {QStringLiteral("https://example.com")}},
+        {QStringLiteral("http://example.com:8080/booru/index.php?page=post&s=list"),
+         {QStringLiteral("http://example.com:8080/booru"), QStringLiteral("http://example.com:8080")}},
+        {QStringLiteral("https://example.com/booru/"),
+         {QStringLiteral("https://example.com/booru"), QStringLiteral("https://example.com")}},
+        {QStringLiteral("ftp://example.com"), {}},
+        {QString(), {}},
+        {QStringLiteral("not an address"), {}},
+    };
+    for (const Case &c : cases) {
+        const QStringList got = SourceDetector::candidateBaseUrls(c.typed);
+        check(qPrintable(QStringLiteral("\"%1\"").arg(c.typed)), got == c.want, got.join(QStringLiteral(" | ")));
+    }
+}
+
+void testDetectorClues()
+{
+    begin("Source detection: what a front page gives away");
+
+    struct Case {
+        const char *name;
+        QByteArray html;
+        QString firstFlavor;
+        QString blocker;
+        bool gelbooruListing;
+    };
+    const QVector<Case> cases = {
+        {"Gelbooru links", R"(<a href="index.php?page=post&amp;s=list&amp;tags=all">Posts</a>)",
+         QStringLiteral("gelbooru"), QString(), true},
+        {"Danbooru links", R"(<a href="/posts?tags=cat">cat</a> <a href="/posts/12">x</a>)",
+         QStringLiteral("danbooru"), QString(), false},
+        {"e621 before Danbooru", R"(<title>e621</title><a href="/posts/5">x</a>)",
+         QStringLiteral("e621"), QString(), false},
+        {"Moebooru links", R"(<a href="/post/show/1271004">x</a>)", QStringLiteral("moebooru"), QString(), false},
+        {"Shimmie2 footer", R"(<footer>Running <a href="https://github.com/shish/shimmie2">Shimmie2</a></footer>)",
+         QStringLiteral("shimmie"), QString(), false},
+        {"Philomena", R"(<div class="image-container" data-image-id="5">)", QStringLiteral("philomena"),
+         QString(), false},
+        {"Cloudflare", "<html><head><title>Just a moment...</title></head><body>cf-chl</body></html>",
+         QString(), QStringLiteral("Cloudflare"), false},
+        {"Anubis", R"(<title>Oh noes!</title><img src="/.within.website/x/cmd/anubis/static/img/reject.webp">)",
+         QString(), QStringLiteral("Anubis"), false},
+        {"an ordinary page", "<html><body>Hello</body></html>", QString(), QString(), false},
+    };
+    for (const Case &c : cases) {
+        const SourceDetector::PageClues clues = SourceDetector::readFrontPage(c.html);
+        check(c.name, clues.flavors.value(0) == c.firstFlavor && clues.blocker == c.blocker
+                          && clues.gelbooruListing == c.gelbooruListing,
+              clues.flavors.join(QLatin1Char(',')) + QLatin1Char('/') + clues.blocker);
+    }
+
+    check("Rule34's missing key", SourceDetector::asksForCredentials(
+        200, "Missing authentication. Go to api.rule34.xxx for more information"));
+    check("HTTP 401", SourceDetector::asksForCredentials(401, ""));
+    check("an empty answer is no request for a key", !SourceDetector::asksForCredentials(200, "[]"));
+}
+
+// Answers each request through a function of path and query, and keeps the
+// paths it was asked for.
+class RouteServer : public QTcpServer {
+public:
+    struct Answer {
+        int status = 404;
+        QByteArray type = "text/html";
+        QByteArray body;
+        QByteArray location;
+    };
+    using Handler = std::function<Answer(const QString &path, const QUrlQuery &query)>;
+
+    explicit RouteServer(Handler handler) : m_handler(std::move(handler))
+    {
+        connect(this, &QTcpServer::newConnection, this, [this]() {
+            while (hasPendingConnections()) {
+                QTcpSocket *socket = nextPendingConnection();
+                connect(socket, &QTcpSocket::readyRead, socket, [this, socket]() { onReadyRead(socket); });
+                connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+            }
+        });
+        listen(QHostAddress::LocalHost, 0);
+    }
+
+    QString base() const { return QStringLiteral("http://127.0.0.1:%1").arg(serverPort()); }
+
+    QStringList requested;
+
+private:
+    void onReadyRead(QTcpSocket *socket)
+    {
+        const QByteArray buffered = socket->property("buffered").toByteArray() + socket->readAll();
+        socket->setProperty("buffered", buffered);
+        if (!buffered.contains("\r\n\r\n"))
+            return;
+        socket->setProperty("buffered", QByteArray());
+
+        const QByteArray target = buffered.left(buffered.indexOf("\r\n")).split(' ').value(1);
+        const QUrl url(base() + QString::fromUtf8(target));
+        requested.append(url.path() + (url.hasQuery() ? QLatin1Char('?') + url.query() : QString()));
+        const Answer answer = m_handler(url.path(), QUrlQuery(url));
+
+        QByteArray response = "HTTP/1.1 " + QByteArray::number(answer.status) + " X\r\nContent-Type: "
+            + answer.type + "\r\nContent-Length: " + QByteArray::number(answer.body.size()) + "\r\n";
+        if (!answer.location.isEmpty())
+            response += "Location: " + answer.location + "\r\n";
+        response += "Connection: close\r\n\r\n" + answer.body;
+        socket->write(response);
+        socket->flush();
+        socket->disconnectFromHost();
+    }
+
+    Handler m_handler;
+};
+
+// Runs one detection to its end.
+struct Detection {
+    SourceDetector::Result result;
+    QStringList probed; // "flavor:tag" in order
+    bool done = false;
+};
+
+Detection detect(const QString &url, const QString &flavor = {})
+{
+    Detection d;
+    SourceDetector detector;
+    QObject::connect(&detector, &SourceDetector::probing,
+                     [&d](const QString &f, int, int, const QString &tag) { d.probed.append(f + QLatin1Char(':') + tag); });
+    QObject::connect(&detector, &SourceDetector::finished, [&d](const SourceDetector::Result &r) {
+        d.result = r;
+        d.done = true;
+    });
+    SourceDetector::Request request;
+    request.url = url;
+    request.flavor = flavor;
+    detector.start(request);
+    QElapsedTimer waited;
+    waited.start();
+    while (!d.done && waited.elapsed() < 30000)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    return d;
+}
+
+RouteServer::Answer html(const QByteArray &body, int status = 200)
+{
+    RouteServer::Answer a;
+    a.status = status;
+    a.body = body;
+    return a;
+}
+
+RouteServer::Answer data(const QByteArray &body, const QByteArray &type = "application/json")
+{
+    RouteServer::Answer a;
+    a.status = 200;
+    a.type = type;
+    a.body = body;
+    return a;
+}
+
+const QByteArray kGelbooruPosts =
+    R"([{"id":3,"file_url":"https://img.example/3.jpg","preview_url":"https://img.example/t3.jpg","tags":"a b"}])";
+
+void testDetectorEndToEnd()
+{
+    begin("Source detection against a local server");
+
+    {
+        // A Gelbooru-engine site installed in /booru, a post page pasted.
+        RouteServer server([](const QString &path, const QUrlQuery &query) {
+            if (path == QStringLiteral("/booru/"))
+                return html(R"(<a href="index.php?page=post&amp;s=list">Posts</a>)");
+            if (path == QStringLiteral("/booru/index.php") && query.queryItemValue(QStringLiteral("page")) == QStringLiteral("dapi"))
+                return data(kGelbooruPosts);
+            return RouteServer::Answer();
+        });
+        const Detection d = detect(server.base() + QStringLiteral("/booru/index.php?page=post&s=view&id=3"));
+        check("found", d.result.found, d.probed.join(QLatin1Char(' ')));
+        equal("as gelbooru", d.result.flavor, QStringLiteral("gelbooru"));
+        equal("at its folder, not the post", d.result.baseUrl, server.base() + QStringLiteral("/booru"));
+        check("the front page put gelbooru first", d.probed.value(0) == QStringLiteral("gelbooru:"),
+              d.probed.join(QLatin1Char(' ')));
+    }
+
+    {
+        // Shimmie2, recognized by its footer and probed first.
+        RouteServer server([](const QString &path, const QUrlQuery &query) {
+            if (path == QStringLiteral("/"))
+                return html("<footer>Running Shimmie2</footer>");
+            if (path == QStringLiteral("/index.php")
+                && query.queryItemValue(QStringLiteral("q")) == QStringLiteral("api/danbooru/find_posts")) {
+                return data("<posts count='1' offset='0'><post id='9' file_url='https://cdn.example/9' "
+                            "file_name='9.png' preview_url='https://cdn.example/t9' tags='x'/></posts>",
+                            "application/xml");
+            }
+            return RouteServer::Answer();
+        });
+        const Detection d = detect(server.base());
+        equal("shimmie", d.result.flavor, QStringLiteral("shimmie"));
+        check("with one probe", d.probed == QStringList{QStringLiteral("shimmie:")}, d.probed.join(QLatin1Char(' ')));
+    }
+
+    {
+        // Nothing for an empty search, posts for "all": only the engine
+        // that answered in its own format is asked again.
+        RouteServer server([](const QString &path, const QUrlQuery &query) {
+            if (path == QStringLiteral("/index.php") && query.queryItemValue(QStringLiteral("page")) == QStringLiteral("dapi")) {
+                return data(query.queryItemValue(QStringLiteral("tags")) == QStringLiteral("all") ? kGelbooruPosts : "[]");
+            }
+            return RouteServer::Answer();
+        });
+        const Detection d = detect(server.base());
+        equal("found with a tag", d.result.flavor, QStringLiteral("gelbooru"));
+        check("the retry asked only gelbooru", d.probed.last() == QStringLiteral("gelbooru:all")
+                  && d.probed.count(QStringLiteral("danbooru:all")) == 0,
+              d.probed.join(QLatin1Char(' ')));
+    }
+
+    {
+        // Behind Cloudflare: every page is the challenge.
+        RouteServer server([](const QString &, const QUrlQuery &) {
+            return html("<html><head><title>Just a moment...</title></head><body>cf-chl</body></html>", 403);
+        });
+        const Detection d = detect(server.base());
+        check("not found", !d.result.found);
+        check("reported as blocked", d.result.failure == SourceDetector::Failure::Blocked);
+        equal("by Cloudflare", d.result.blocker, QStringLiteral("Cloudflare"));
+    }
+
+    {
+        // A Gelbooru-engine site that wants an API key.
+        RouteServer server([](const QString &path, const QUrlQuery &) {
+            if (path == QStringLiteral("/"))
+                return html(R"(<a href="index.php?page=post&amp;s=list">Posts</a>)");
+            if (path == QStringLiteral("/index.php"))
+                return data("Missing authentication. Go to api.example for more information", "text/plain");
+            return RouteServer::Answer();
+        });
+        const Detection d = detect(server.base());
+        check("asks for a key", d.result.failure == SourceDetector::Failure::NeedsCredentials);
+        equal("on the gelbooru API", d.result.credentialsFlavor, QStringLiteral("gelbooru"));
+    }
+
+    {
+        // A Gelbooru-engine site with its API turned off.
+        RouteServer server([](const QString &path, const QUrlQuery &query) {
+            if (path == QStringLiteral("/") || query.queryItemValue(QStringLiteral("page")) == QStringLiteral("dapi"))
+                return html(R"(<a href="index.php?page=post&amp;s=view&amp;id=1"><img src="t.jpg"></a>)");
+            return RouteServer::Answer();
+        });
+        const Detection d = detect(server.base());
+        check("suggests the HTML bridge", d.result.failure == SourceDetector::Failure::NeedsHtmlBridge);
+    }
+
+    {
+        // The front page redirects to another address (http -> https, or
+        // to www.); the probes and the saved base follow it.
+        RouteServer target([](const QString &path, const QUrlQuery &query) {
+            if (path == QStringLiteral("/"))
+                return html(R"(<a href="index.php?page=post&amp;s=list">Posts</a>)");
+            if (query.queryItemValue(QStringLiteral("page")) == QStringLiteral("dapi"))
+                return data(kGelbooruPosts);
+            return RouteServer::Answer();
+        });
+        const QByteArray location = target.base().toUtf8() + "/";
+        RouteServer old([location](const QString &, const QUrlQuery &) {
+            RouteServer::Answer a;
+            a.status = 301;
+            a.location = location;
+            return a;
+        });
+        const Detection d = detect(old.base());
+        check("found", d.result.found);
+        equal("at the new address", d.result.baseUrl, target.base());
+    }
+
+    {
+        // One engine chosen: only it is asked, the front page is not read.
+        RouteServer server([](const QString &, const QUrlQuery &) { return data("[]"); });
+        const Detection d = detect(server.base(), QStringLiteral("moebooru"));
+        check("only moebooru", d.probed.value(0) == QStringLiteral("moebooru:")
+                  && !d.probed.join(QLatin1Char(' ')).contains(QStringLiteral("danbooru")),
+              d.probed.join(QLatin1Char(' ')));
+        check("no front page request", !server.requested.contains(QStringLiteral("/")),
+              server.requested.join(QLatin1Char(' ')));
+    }
+
+    {
+        const Detection d = detect(QStringLiteral("ftp://nope"));
+        check("not a web address", d.result.failure == SourceDetector::Failure::InvalidUrl);
+    }
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -1083,6 +1497,11 @@ int main(int argc, char **argv)
     testSourceManager();
     testThumbnailCancel();
     testDownloads();
+    testShimmieSource();
+    testDownloadExtensionHint();
+    testDetectorAddresses();
+    testDetectorClues();
+    testDetectorEndToEnd();
     // Last: it changes the application palette.
     testTheme();
 

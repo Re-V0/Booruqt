@@ -17,6 +17,7 @@
 
 #include "sources/DanbooruSource.h"
 #include "sources/GelbooruSource.h"
+#include "sources/ShimmieSource.h"
 #include "sources/MoebooruSource.h"
 #include "sources/E621Source.h"
 #include "sources/PhilomenaSource.h"
@@ -50,6 +51,8 @@ QSharedPointer<ISource> SourceManager::createSource(const QString &name, const Q
         return QSharedPointer<PhilomenaSource>::create(name, baseUrl);
     if (flavor == QStringLiteral("szurubooru"))
         return QSharedPointer<SzurubooruSource>::create(name, baseUrl, apiKey, userId);
+    if (flavor == QStringLiteral("shimmie"))
+        return QSharedPointer<ShimmieSource>::create(name, baseUrl);
     if (flavor == QStringLiteral("python")) {
         if (scriptPath.isEmpty())
             return {};
@@ -67,6 +70,7 @@ QStringList SourceManager::knownFlavors()
         QStringLiteral("e621"),
         QStringLiteral("philomena"),
         QStringLiteral("szurubooru"),
+        QStringLiteral("shimmie"),
     };
 }
 

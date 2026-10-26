@@ -9,11 +9,8 @@
 
 #include <QDialog>
 #include <QString>
-#include <QStringList>
-#include <QVector>
-#include <QNetworkRequest>
-#include <QSharedPointer>
-#include "Post.h"
+
+#include "SourceDetector.h"
 
 class QLineEdit;
 class QComboBox;
@@ -22,11 +19,8 @@ class QLabel;
 class QPlainTextEdit;
 class QDialogButtonBox;
 class QCheckBox;
-class QNetworkAccessManager;
-class QNetworkReply;
-class ISource;
 
-// Registers a custom booru by auto-probing each known flavor against it.
+// Registers a custom booru; SourceDetector works out its engine.
 class AddSourceDialog : public QDialog {
     Q_OBJECT
 public:
@@ -44,18 +38,13 @@ public:
 
 private slots:
     void startTest();
-    void tryNextFlavor();
-    // flavor travels with the reply; re-reading m_tryIndex could be stale.
-    void onProbeReplyFinished(QNetworkReply *reply, const QString &flavor);
+    void onProbing(const QString &flavor, int index, int total, const QString &tag);
+    void onDetectionFinished(const SourceDetector::Result &result);
     void applyPreset(int index);
     void onHtmlBridgeToggled(bool checked);
     void browseForScript();
 
 private:
-    // Split so a blocking source (a plugin) can build and parse off-thread.
-    void sendProbeRequest(QNetworkRequest request, const QString &flavor);
-    void handleProbeResult(const QString &flavor, int httpStatus, const QVector<Post> &posts,
-                           const QString &snippet);
     QString normalizedBaseUrl() const;
     QString hintForIndex(int index) const;
     // Clears a previous successful test on any relevant edit.
@@ -80,11 +69,6 @@ private:
     QPlainTextEdit *m_logEdit;
     QDialogButtonBox *m_buttonBox;
 
-    QNetworkAccessManager *m_probeNetwork;
-    QSharedPointer<ISource> m_probeSource;
-    QStringList m_flavorsToTry;
-    int m_tryIndex = 0;
-    // Indexes into probeTags(); retries with a non-empty tag if needed.
-    int m_probePass = 0;
+    SourceDetector *m_detector;
     QString m_detectedFlavor;
 };
