@@ -311,6 +311,16 @@
         <translation>An Fenster anpassen</translation>
     </message>
     <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="209"/>
+        <source>Nie udało się odtworzyć wideo: %1</source>
+        <translation>Video konnte nicht abgespielt werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="172"/>
+        <source>Nie udało się utworzyć pliku tymczasowego: %1</source>
+        <translation>Temporäre Datei konnte nicht erstellt werden: %1</translation>
+    </message>
+    <message>
         <location filename="../src/ImageViewerDialog.cpp" line="73"/>
         <source>Nie udało się zdekodować obrazu.</source>
         <translation>Bild konnte nicht dekodiert werden.</translation>
@@ -319,6 +329,11 @@
         <location filename="../src/ImageViewerDialog.cpp" line="32"/>
         <source>Wczytywanie...</source>
         <translation>Lade...</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="185"/>
+        <source>Wczytywanie... %1%</source>
+        <translation>Lade... %1%</translation>
     </message>
 </context>
 <context>
@@ -582,6 +597,11 @@ Nein - die Dateien bleiben am alten Ort und sind nur unter &quot;(alle Ordner)&q
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="151"/>
+        <source>Animowane miniatury (wideo, GIF)</source>
+        <translation>Animierte Miniaturen (Video, GIF)</translation>
+    </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="134"/>
         <location filename="../src/MainWindow.cpp" line="153"/>

@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Network Concurrent Sql LinguistTools)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network Concurrent Sql Multimedia MultimediaWidgets LinguistTools)
 
 qt_standard_project_setup()
 
@@ -33,6 +33,8 @@ add_executable(blairqt
     src/GalleryModel.cpp
     src/ThumbnailLoader.h
     src/ThumbnailLoader.cpp
+    src/AnimatedThumbnails.h
+    src/AnimatedThumbnails.cpp
     src/SourceManager.h
     src/SourceManager.cpp
     src/AddSourceDialog.h
@@ -84,6 +86,8 @@ target_link_libraries(blairqt PRIVATE
     Qt6::Network
     Qt6::Concurrent
     Qt6::Sql
+    Qt6::Multimedia
+    Qt6::MultimediaWidgets
 )
 
 # Install layout per platform. The files the program reads at run time
@@ -232,6 +236,9 @@ if(BUILD_TESTING)
         src/sources/PythonPluginSource.cpp
         src/NetworkLog.cpp
         src/ThumbnailLoader.cpp
+        src/AnimatedThumbnails.cpp
+        src/GalleryModel.cpp
+        src/GalleryView.cpp
         src/ThemeManager.cpp
         src/DownloadManager.cpp
         src/FolderAccessGuard.cpp
@@ -243,7 +250,7 @@ if(BUILD_TESTING)
     if(MSVC)
         target_compile_options(blairqt_tests PRIVATE /utf-8)
     endif()
-    target_link_libraries(blairqt_tests PRIVATE Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent)
+    target_link_libraries(blairqt_tests PRIVATE Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent Qt6::Multimedia)
     add_test(NAME logic COMMAND blairqt_tests)
     set_tests_properties(logic PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
@@ -273,5 +280,7 @@ set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt6sql6-sqlite")
-set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "python3")
+# Qt 6.4 (Ubuntu 24.04) plays video through GStreamer, which needs these
+# for WebM and MP4; newer Qt uses FFmpeg, which libqt6multimedia6 pulls in.
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "python3, gstreamer1.0-plugins-good, gstreamer1.0-libav")
 include(CPack)

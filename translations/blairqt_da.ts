@@ -311,6 +311,16 @@
         <translation>Tilpas til vindue</translation>
     </message>
     <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="209"/>
+        <source>Nie udało się odtworzyć wideo: %1</source>
+        <translation>Kunne ikke afspille videoen: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="172"/>
+        <source>Nie udało się utworzyć pliku tymczasowego: %1</source>
+        <translation>Kunne ikke oprette en midlertidig fil: %1</translation>
+    </message>
+    <message>
         <location filename="../src/ImageViewerDialog.cpp" line="73"/>
         <source>Nie udało się zdekodować obrazu.</source>
         <translation>Kunne ikke afkode billedet.</translation>
@@ -319,6 +329,11 @@
         <location filename="../src/ImageViewerDialog.cpp" line="32"/>
         <source>Wczytywanie...</source>
         <translation>Indlæser...</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="185"/>
+        <source>Wczytywanie... %1%</source>
+        <translation>Indlæser... %1%</translation>
     </message>
 </context>
 <context>
@@ -582,6 +597,11 @@ Nej - filerne bliver liggende og vises kun under &quot;(alle mapper)&quot;.</tra
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="151"/>
+        <source>Animowane miniatury (wideo, GIF)</source>
+        <translation>Animerede miniaturer (video, GIF)</translation>
+    </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="134"/>
         <location filename="../src/MainWindow.cpp" line="153"/>

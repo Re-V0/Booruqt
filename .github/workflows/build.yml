@@ -36,7 +36,7 @@ jobs:
     container: archlinux:latest
     steps:
       - name: Install build tools
-        run: pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-tools python
+        run: pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-multimedia qt6-tools python
 
       - uses: actions/checkout@v6
         with:
@@ -92,7 +92,7 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git cmake ninja-build g++ dpkg-dev file python3 \
-            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
+            qt6-base-dev qt6-multimedia-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
             libqt6sql6-sqlite libgl-dev
 
       - uses: actions/checkout@v6
@@ -132,6 +132,7 @@ jobs:
           host: windows
           target: desktop
           arch: win64_msvc2022_64
+          modules: qtmultimedia
           cache: true
 
       # cl.exe and the Windows SDK on PATH, for Ninja.
@@ -205,6 +206,7 @@ jobs:
             'translations\blairqt_en.qm', 'translations\blairqt_de.qm',
             'translations\blairqt_da.qm', 'translations\blairqt_ru.qm',
             'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'Qt6Sql.dll',
+            'Qt6Multimedia.dll', 'Qt6MultimediaWidgets.dll', 'multimedia\ffmpegmediaplugin.dll',
             'platforms\qwindows.dll', 'sqldrivers\qsqlite.dll', 'tls\qschannelbackend.dll',
             'imageformats\qjpeg.dll', 'imageformats\qgif.dll', 'styles\qmodernwindowsstyle.dll',
             'licenses\MPL-2.0.txt', 'licenses\LGPL-3.0.txt', 'licenses\GPL-3.0.txt', 'licenses\NOTICE.txt')
@@ -327,6 +329,7 @@ jobs:
           host: mac
           target: desktop
           arch: clang_64
+          modules: qtmultimedia
           cache: true
 
       - name: Install tools
@@ -361,6 +364,7 @@ jobs:
           codesign --force --deep --sign - "$app"
           codesign --verify --deep --strict "$app"
           test -f "$app/Contents/PlugIns/sqldrivers/libqsqlite.dylib"
+          test -f "$app/Contents/PlugIns/multimedia/libffmpegmediaplugin.dylib"
           # The app carries Qt, so it carries the license texts too.
           for license in MPL-2.0.txt LGPL-3.0.txt GPL-3.0.txt NOTICE.txt; do
             test -f "$app/Contents/Resources/licenses/$license"
@@ -396,7 +400,7 @@ jobs:
           sync: rsync
           copyback: true
           prepare: |
-            pkg install -y cmake ninja qt6-base qt6-tools qt6-base_sqldriver-sqlite python3
+            pkg install -y cmake ninja qt6-base qt6-multimedia qt6-tools qt6-base_sqldriver-sqlite python3
           run: |
             set -e
             version=$(sed -n 's/^project(blairqt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <QSize>
+#include <QVector>
 
 class QListView;
 class GalleryModel;
@@ -29,6 +30,9 @@ void configure(QListView *view);
 
 // Resizes the cells of a view set up by configure().
 void setCellSize(QListView *view, const QSize &size);
+
+// The rows inside the viewport, in order.
+QVector<int> visibleRows(const QListView *view, const GalleryModel *model);
 
 // Requests thumbnails for the rows inside the viewport.
 void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *loader);

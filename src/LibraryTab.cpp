@@ -15,6 +15,7 @@
 #include "Paging.h"
 #include "TagLineEdit.h"
 #include "ThumbnailLoader.h"
+#include "AnimatedThumbnails.h"
 
 #include <QAbstractItemView>
 #include <QCheckBox>
@@ -78,6 +79,7 @@ LibraryTab::LibraryTab(LibraryDatabase *library, DownloadManager *downloadManage
 {
     buildUi();
     setupTagCompleter();
+    m_libraryAnimations = new AnimatedThumbnails(m_libraryView, m_libraryModel, this);
 
     // The loader starts at the default cell; a slider change resizes it.
     m_libraryThumbnailLoader->setTargetSize(GalleryView::thumbnailSizeForCell(
@@ -756,6 +758,12 @@ void LibraryTab::onLibraryThumbnailReady(int row, QPixmap pixmap)
 void LibraryTab::requestVisibleLibraryThumbnails()
 {
     GalleryView::requestVisibleRows(m_libraryView, m_libraryModel, m_libraryThumbnailLoader);
+    m_libraryAnimations->refresh();
+}
+
+void LibraryTab::setAnimatedThumbnails(bool enabled)
+{
+    m_libraryAnimations->setEnabled(enabled);
 }
 
 void LibraryTab::onLibraryClicked(const QModelIndex &index)

@@ -20,7 +20,7 @@ site against eight engines and picks the one that fits. Anything else takes a
 short Python plugin — or, for sites with no API at all, the bundled
 HTML-scrape bridge.
 
-What it does not do: play video, log into accounts, upload anything, or
+What it does not do: play sound, log into accounts, upload anything, or
 sandbox plugins.
 
 ![Searching Safebooru; the details panel shows the clicked post](docs/screenshot-search.png)
@@ -80,7 +80,7 @@ emerge -av media-gfx/blairqt
 an interpreter for script plugins; `USE=test` runs the suite during the
 merge.
 
-Anything else — needs Qt 6 (Widgets, Network, Concurrent, Sql,
+Anything else — needs Qt 6 (Widgets, Network, Concurrent, Sql, Multimedia,
 LinguistTools), CMake 3.21+ and a C++20 compiler:
 
 ```bash
@@ -126,6 +126,12 @@ scraping HTML.
 Every request, status code and response snippet lands in the network log dock.
 When a site misbehaves, that dock is the first place to look.
 
+Video posts (WebM, MP4) play in the zoom viewer as soon as it opens, in a loop
+and without sound, and so do GIFs. **Settings → Appearance → Animated
+thumbnails** makes video and GIF posts move in the grid too. It is off by
+default, because each of them downloads its whole file: only posts in view
+play, six at most, none over 32 MB.
+
 ## Library
 
 Downloads are indexed in SQLite and written into real nested folders — the
@@ -143,7 +149,7 @@ because why not — txt is cheap.
 
 Search the library by tag, filter by folder, with or without subfolders.
 Tags match whole, ignoring case: `solo` does not find `solo_focus`. Zoom opens
-local files instantly, animated GIFs included.
+local files instantly, animated GIFs and video included.
 
 ## Blacklist
 
@@ -283,4 +289,5 @@ Linux and FreeBSD packages use the Qt your system provides. The Windows zip and
 the macOS app carry unmodified Qt libraries next to the program; replacing
 them with your own build of the same Qt version is allowed. Both carry the
 license texts (MPL-2.0, LGPL-3.0, GPL-3.0) in a `licenses` folder, with a
-`NOTICE.txt` naming the Qt version and where its source code is.
+`NOTICE.txt` naming the Qt version, where its source code is, and the FFmpeg
+libraries that come with it to play video.

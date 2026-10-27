@@ -19,6 +19,7 @@
 #include "SourceManager.h"
 #include "TagLineEdit.h"
 #include "ThumbnailLoader.h"
+#include "AnimatedThumbnails.h"
 
 #include <QAbstractItemView>
 #include <QCheckBox>
@@ -74,6 +75,7 @@ SearchTab::SearchTab(SourceManager &sourceManager, LibraryDatabase *library,
 {
     buildUi();
     setupTagCompleter();
+    m_animations = new AnimatedThumbnails(m_galleryView, m_model, this);
 
     const QSettings settings;
     m_resultsPerPage = settings.value(QStringLiteral("resultsPerPage"), m_resultsPerPage).toInt();
@@ -803,6 +805,12 @@ void SearchTab::onThumbnailReady(int row, QPixmap pixmap)
 void SearchTab::requestVisibleThumbnails()
 {
     GalleryView::requestVisibleRows(m_galleryView, m_model, m_thumbnailLoader);
+    m_animations->refresh();
+}
+
+void SearchTab::setAnimatedThumbnails(bool enabled)
+{
+    m_animations->setEnabled(enabled);
 }
 
 void SearchTab::maybeAutoLoadNextPage()

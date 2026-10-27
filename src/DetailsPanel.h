@@ -24,7 +24,8 @@ public:
     void clear();
 
 signals:
-    void zoomRequested(QString imageUrl, QString title);
+    // video: url plays as a video (see viewerMedia()).
+    void zoomRequested(QString url, bool video, QString title);
     void downloadRequested(Post post);
 
 private:

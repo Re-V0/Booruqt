@@ -34,19 +34,31 @@ struct Post {
     qint64 libraryId = 0;
 };
 
-// The viewer decodes still images and animations, never video streams.
-inline bool isVideoUrl(const QString &url)
+// File extensions played as video rather than decoded as an image.
+inline bool isVideoExtension(const QString &extension)
 {
     static const QStringList videoExtensions = {
-        QStringLiteral(".webm"), QStringLiteral(".mp4"), QStringLiteral(".m4v"),
-        QStringLiteral(".mov"), QStringLiteral(".mkv"), QStringLiteral(".avi"),
+        QStringLiteral("webm"), QStringLiteral("mp4"), QStringLiteral("m4v"),
+        QStringLiteral("mov"), QStringLiteral("mkv"), QStringLiteral("avi"),
     };
-    const QString path = QUrl(url).path().toLower();
-    for (const QString &extension : videoExtensions) {
-        if (path.endsWith(extension))
-            return true;
-    }
-    return false;
+    return videoExtensions.contains(extension.toLower());
+}
+
+// By the extension of the URL's path; a query string does not count.
+inline bool isVideoUrl(const QString &url)
+{
+    const QString path = QUrl(url).path();
+    const int dot = path.lastIndexOf(QLatin1Char('.'));
+    if (dot < 0 || dot < path.lastIndexOf(QLatin1Char('/')))
+        return false;
+    return isVideoExtension(path.mid(dot + 1));
+}
+
+// The post's file is a video, also when its URL has no extension and the
+// site reported one separately (Shimmie2).
+inline bool isVideoPost(const Post &post)
+{
+    return isVideoUrl(post.fileUrl) || isVideoExtension(post.fileExtension);
 }
 
 // An already-downloaded file always wins: it opens instantly and works
@@ -67,16 +79,47 @@ inline QString fullImageUrl(const Post &post)
     return post.sampleUrl.isEmpty() ? post.previewUrl : post.sampleUrl;
 }
 
-// For remote posts the viewer prefers the sample: originals can be tens of
-// megabytes. A local file costs nothing, so it is used as-is. Video is
-// skipped at every step - on a video post the thumbnail is the only frame
-// the viewer can show, and an empty result means "nothing to zoom into".
-inline QString viewerImageUrl(const Post &post)
+// A file to open, and whether it plays as a video.
+struct MediaLink {
+    QString url;
+    bool video = false;
+};
+
+// What the zoom viewer opens; an empty url means nothing. A downloaded file
+// always wins. A video post plays its video: the sample when the site made
+// a video sample (it is smaller), otherwise the original. An image post
+// shows the sample before the original, since originals can be tens of
+// megabytes.
+inline MediaLink viewerMedia(const Post &post)
 {
-    const QStringList candidates = {localImageUrl(post), post.sampleUrl, post.fileUrl, post.previewUrl};
+    const QString local = localImageUrl(post);
+    if (!local.isEmpty())
+        return {local, isVideoUrl(local)};
+    if (isVideoPost(post)) {
+        if (isVideoUrl(post.sampleUrl))
+            return {post.sampleUrl, true};
+        return {post.fileUrl, true};
+    }
+    const QStringList candidates = {post.sampleUrl, post.fileUrl, post.previewUrl};
     for (const QString &candidate : candidates) {
         if (!candidate.isEmpty() && !isVideoUrl(candidate))
-            return candidate;
+            return {candidate, false};
     }
     return {};
+}
+
+// What an animated grid thumbnail plays: the video the viewer would play,
+// or the GIF original. An empty url means the post does not move.
+inline MediaLink animatedThumbnailMedia(const Post &post)
+{
+    const MediaLink viewer = viewerMedia(post);
+    if (viewer.video)
+        return viewer;
+
+    const QString file = post.localFilePath.isEmpty() ? post.fileUrl : localImageUrl(post);
+    const bool gif = QUrl(file).path().endsWith(QStringLiteral(".gif"), Qt::CaseInsensitive)
+        || (post.localFilePath.isEmpty() && post.fileExtension.compare(QStringLiteral("gif"), Qt::CaseInsensitive) == 0);
+    if (file.isEmpty() || !gif)
+        return {};
+    return {file, false};
 }

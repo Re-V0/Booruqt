@@ -51,7 +51,7 @@ private slots:
     void openThemeFile();
     void pickCuratedTheme();
 
-    void onZoomRequested(const QString &imageUrl, const QString &title);
+    void onZoomRequested(const QString &url, bool video, const QString &title);
     void onDetailsDownloadRequested(const Post &post);
 
     void changeLanguage(const QString &langCode);

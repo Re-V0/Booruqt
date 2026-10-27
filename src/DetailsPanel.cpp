@@ -56,9 +56,10 @@ DetailsPanel::DetailsPanel(QWidget *parent)
     connect(m_zoomButton, &QPushButton::clicked, this, [this]() {
         if (!m_hasPost)
             return;
-        const QString url = viewerImageUrl(m_currentPost);
-        if (!url.isEmpty())
-            emit zoomRequested(url, QStringLiteral("%1 #%2").arg(m_currentPost.sourceName, m_currentPost.id));
+        const MediaLink media = viewerMedia(m_currentPost);
+        if (!media.url.isEmpty())
+            emit zoomRequested(media.url, media.video,
+                               QStringLiteral("%1 #%2").arg(m_currentPost.sourceName, m_currentPost.id));
     });
     connect(m_openOriginalButton, &QPushButton::clicked, this, [this]() {
         if (m_hasPost && !m_currentPost.fileUrl.isEmpty())
@@ -99,8 +100,7 @@ void DetailsPanel::showPost(const Post &post, const QPixmap &preview)
 
     m_openOriginalButton->setEnabled(!post.fileUrl.isEmpty());
     m_openPageButton->setEnabled(!post.postPageUrl.isEmpty());
-    // Empty means every candidate is video, which the viewer cannot decode.
-    m_zoomButton->setEnabled(!viewerImageUrl(post).isEmpty());
+    m_zoomButton->setEnabled(!viewerMedia(post).url.isEmpty());
     // Downloading needs the full file; without it the manager only errors out.
     m_downloadButton->setEnabled(!post.fileUrl.isEmpty());
 }

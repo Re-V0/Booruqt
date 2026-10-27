@@ -42,6 +42,18 @@ independent project, neither affiliated with nor endorsed by The Qt
 Company.
 
 
+FFmpeg
+------
+
+Video is decoded by the Qt Multimedia FFmpeg plugin, which uses the FFmpeg
+libraries that come with Qt @BLAIRQT_QT_VERSION@, built by The Qt Company and included
+unmodified. FFmpeg is licensed under the GNU Lesser General Public
+License version 2.1 or later; this package uses it under version 3
+(LGPL-3.0.txt). Its source code: https://ffmpeg.org/download.html, and
+the version and build Qt uses: "FFmpeg" in "Third-Party Code Used in Qt",
+linked above.
+
+
 Microsoft Visual C++ runtime (Windows zip only)
 -----------------------------------------------
 

@@ -32,6 +32,7 @@ class LibraryDatabase;
 class DownloadManager;
 class GalleryModel;
 class ThumbnailLoader;
+class AnimatedThumbnails;
 class TagLineEdit;
 
 // The "Biblioteka" tab: browses the downloaded posts by tag and by folder,
@@ -52,6 +53,8 @@ public:
 
     // Shows a size chosen on either tab. Emits nothing.
     void applyThumbnailSize(int value);
+    // Video and GIF posts move in the grid (see AnimatedThumbnails).
+    void setAnimatedThumbnails(bool enabled);
 
 public slots:
     void searchLibrary();
@@ -104,6 +107,7 @@ private:
     GalleryModel *m_libraryModel = nullptr;
     ThumbnailLoader *m_libraryThumbnailLoader = nullptr;
     QListView *m_libraryView = nullptr;
+    AnimatedThumbnails *m_libraryAnimations = nullptr;
     TagLineEdit *m_libraryTagsEdit;
     QPushButton *m_librarySearchButton;
     QPushButton *m_libraryLoadMoreButton;

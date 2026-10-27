@@ -20,6 +20,7 @@ RESTRICT="!test? ( test )"
 # Sql without sqlite would build, then fail to open the library at runtime.
 RDEPEND="
 	dev-qt/qtbase:6[concurrent,gui,network,sql,sqlite,widgets]
+	dev-qt/qtmultimedia:6
 	python? ( dev-lang/python:* )
 "
 DEPEND="${RDEPEND}"

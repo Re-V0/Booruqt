@@ -30,6 +30,9 @@
 #include "SourceDetector.h"
 #include "SiteAccess.h"
 #include "AppInfo.h"
+#include "AnimatedThumbnails.h"
+#include "GalleryModel.h"
+#include "GalleryView.h"
 
 #include <QApplication>
 #include <QTemporaryDir>
@@ -51,6 +54,11 @@
 #include <QUrlQuery>
 #include <QNetworkRequest>
 #include <QEventLoop>
+#include <QFile>
+#include <QListView>
+#include <QPixmap>
+#include <QSet>
+#include <algorithm>
 #include <functional>
 #include <iostream>
 
@@ -626,29 +634,61 @@ void testViewerUrls()
     check("query string alone does not fool it",
           !isVideoUrl(QStringLiteral("https://x.org/a.jpg?src=movie.mp4")));
 
+    check("no extension is not video", !isVideoUrl(QStringLiteral("https://x.org/data/ab/cd/0123abcd")));
+    check("a dot in a folder name does not count", !isVideoUrl(QStringLiteral("https://x.org/v1.mp4/file")));
+
     Post video;
     video.sampleUrl = QStringLiteral("https://x.org/sample.mp4");
     video.fileUrl = QStringLiteral("https://x.org/full.webm");
     video.previewUrl = QStringLiteral("https://x.org/thumb.jpg");
-    equal("video post falls back to the still thumbnail", viewerImageUrl(video),
-          QStringLiteral("https://x.org/thumb.jpg"));
+    equal("video post plays its video sample", viewerMedia(video).url, video.sampleUrl);
+    check("... as a video", viewerMedia(video).video);
+
+    Post stillSample;
+    stillSample.sampleUrl = QStringLiteral("https://x.org/sample.jpg");
+    stillSample.fileUrl = QStringLiteral("https://x.org/full.mp4");
+    equal("a still sample does not stand in for the video", viewerMedia(stillSample).url, stillSample.fileUrl);
+
+    Post shimmieVideo;
+    shimmieVideo.fileUrl = QStringLiteral("https://x.org/_images/0123abcd");
+    shimmieVideo.fileExtension = QStringLiteral("webm");
+    check("extension reported by the site makes a video", viewerMedia(shimmieVideo).video);
 
     Post localVideo;
     localVideo.localFilePath = QStringLiteral("/home/u/clip.webm");
-    localVideo.previewUrl = QUrl::fromLocalFile(localVideo.localFilePath).toString();
-    check("all-video post offers nothing to zoom into", viewerImageUrl(localVideo).isEmpty());
+    localVideo.fileUrl = QStringLiteral("https://x.org/full.webm");
+    equal("downloaded video plays from disk", viewerMedia(localVideo).url,
+          QUrl::fromLocalFile(localVideo.localFilePath).toString());
+    check("... as a video", viewerMedia(localVideo).video);
 
     Post image;
     image.localFilePath = QStringLiteral("/home/u/pic.png");
     image.sampleUrl = QStringLiteral("https://x.org/sample.jpg");
-    equal("local image still wins", viewerImageUrl(image),
+    equal("local image still wins", viewerMedia(image).url,
           QUrl::fromLocalFile(QStringLiteral("/home/u/pic.png")).toString());
+    check("... as an image", !viewerMedia(image).video);
 
     Post remote;
     remote.sampleUrl = QStringLiteral("https://x.org/sample.jpg");
     remote.fileUrl = QStringLiteral("https://x.org/full.png");
-    equal("remote viewer prefers the sample", viewerImageUrl(remote), remote.sampleUrl);
+    equal("remote viewer prefers the sample", viewerMedia(remote).url, remote.sampleUrl);
     equal("downloads still take the original", fullImageUrl(remote), remote.fileUrl);
+
+    check("a still image does not animate", animatedThumbnailMedia(remote).url.isEmpty());
+    equal("a video animates with the viewer's choice", animatedThumbnailMedia(video).url, video.sampleUrl);
+    Post gif;
+    gif.sampleUrl = QStringLiteral("https://x.org/sample.jpg");
+    gif.fileUrl = QStringLiteral("https://x.org/full.GIF");
+    equal("a GIF animates from its original", animatedThumbnailMedia(gif).url, gif.fileUrl);
+    check("... not as a video", !animatedThumbnailMedia(gif).video);
+    Post shimmieGif;
+    shimmieGif.fileUrl = QStringLiteral("https://x.org/_images/0123abcd");
+    shimmieGif.fileExtension = QStringLiteral("gif");
+    equal("a GIF known by its reported extension", animatedThumbnailMedia(shimmieGif).url, shimmieGif.fileUrl);
+    Post localPng;
+    localPng.localFilePath = QStringLiteral("/home/u/pic.png");
+    localPng.fileUrl = QStringLiteral("https://x.org/full.gif");
+    check("a downloaded still stays still", animatedThumbnailMedia(localPng).url.isEmpty());
 }
 
 void testAutoLoadChain()
@@ -1337,6 +1377,130 @@ RouteServer::Answer data(const QByteArray &body, const QByteArray &type = "appli
     return a;
 }
 
+// Three 8x8 frames - red, green, blue - 40 ms each, looping.
+const char kTinyGif[] =
+    "\x47\x49\x46\x38\x39\x61\x08\x00\x08\x00\x81\x00\x00\xff\x00\x00\x00\xff"
+    "\x00\x00\x00\xff\x00\x00\x00\x21\xff\x0b\x4e\x45\x54\x53\x43\x41\x50\x45"
+    "\x32\x2e\x30\x03\x01\x00\x00\x00\x21\xf9\x04\x04\x04\x00\x00\x00\x2c\x00"
+    "\x00\x00\x00\x08\x00\x08\x00\x00\x08\x0f\x00\x01\x08\x1c\x48\xb0\xa0\xc1"
+    "\x83\x08\x13\x2a\x4c\x18\x10\x00\x21\xf9\x04\x04\x04\x00\x00\x00\x2c\x00"
+    "\x00\x00\x00\x08\x00\x08\x00\x81\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00"
+    "\x00\x00\x08\x0f\x00\x03\x08\x1c\x48\xb0\xa0\xc1\x83\x08\x13\x2a\x4c\x18"
+    "\x10\x00\x21\xf9\x04\x04\x04\x00\x00\x00\x2c\x00\x00\x00\x00\x08\x00\x08"
+    "\x00\x81\xff\x00\x00\x00\xff\x00\x00\x00\xff\x00\x00\x00\x08\x0f\x00\x05"
+    "\x08\x1c\x48\xb0\xa0\xc1\x83\x08\x13\x2a\x4c\x18\x10\x00\x3b";
+
+// The center pixel of a row's thumbnail, without alpha; 0 when it has none.
+QRgb thumbnailCenter(const GalleryModel &model, int row)
+{
+    const QPixmap pixmap = model.thumbnailAt(row);
+    if (pixmap.isNull())
+        return 0;
+    const QImage image = pixmap.toImage();
+    return image.pixel(image.width() / 2, image.height() / 2) & 0x00ffffff;
+}
+
+void testAnimatedThumbnails()
+{
+    begin("Animated thumbnails (GIF in the grid)");
+
+    const QByteArray gif(kTinyGif, sizeof(kTinyGif) - 1);
+    RouteServer server([gif](const QString &path, const QUrlQuery &) {
+        if (path.startsWith(QStringLiteral("/gif/")))
+            return data(gif, "image/gif");
+        return html("missing", 404);
+    });
+
+    QTemporaryDir dir;
+    const QString localGif = dir.filePath(QStringLiteral("local.gif"));
+    {
+        QFile file(localGif);
+        file.open(QIODevice::WriteOnly);
+        file.write(gif);
+    }
+
+    // 0: a remote GIF. 1: a still image. 2: a GIF that is not there.
+    // 3: a downloaded GIF. 4 to 11: more remote GIFs, past the cap.
+    QVector<Post> posts;
+    for (int row = 0; row < 12; ++row) {
+        Post post;
+        post.id = QString::number(row);
+        post.fileUrl = server.base() + QStringLiteral("/gif/%1.gif").arg(row);
+        posts.append(post);
+    }
+    posts[1].fileUrl = server.base() + QStringLiteral("/still.png");
+    posts[2].fileUrl = server.base() + QStringLiteral("/gone.gif");
+    posts[3].fileUrl.clear();
+    posts[3].localFilePath = localGif;
+
+    GalleryModel model;
+    model.appendPosts(posts);
+    QListView view;
+    GalleryView::configure(&view);
+    view.setModel(&model);
+    GalleryView::setCellSize(&view, QSize(40, 40));
+    view.resize(400, 400);
+    view.show();
+
+    QSet<QRgb> remoteColors;
+    QSet<QRgb> localColors;
+    QObject::connect(&model, &QAbstractItemModel::dataChanged, [&](const QModelIndex &topLeft) {
+        if (topLeft.row() == 0)
+            remoteColors.insert(thumbnailCenter(model, 0));
+        else if (topLeft.row() == 3)
+            localColors.insert(thumbnailCenter(model, 3));
+    });
+
+    AnimatedThumbnails animations(&view, &model);
+    animations.setSettleDelay(0);
+    auto spin = [](int milliseconds, const std::function<bool()> &done) {
+        QElapsedTimer waited;
+        waited.start();
+        while (!done() && waited.elapsed() < milliseconds)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    };
+
+    animations.refresh();
+    spin(200, []() { return false; });
+    check("off until enabled", animations.playingRows().isEmpty() && remoteColors.isEmpty());
+
+    animations.setEnabled(true);
+    spin(10000, [&]() { return remoteColors.size() >= 3 && localColors.size() >= 3; });
+    check("a remote GIF shows all its frames", remoteColors.size() >= 3, QString::number(remoteColors.size()));
+    check("a downloaded GIF too", localColors.size() >= 3, QString::number(localColors.size()));
+
+    QList<int> playing = animations.playingRows();
+    std::sort(playing.begin(), playing.end());
+    QStringList playingText;
+    for (const int row : std::as_const(playing))
+        playingText.append(QString::number(row));
+    check("the still image stays still", !playing.contains(1), playingText.join(QLatin1Char(' ')));
+    check("the missing GIF gives up its place", !playing.contains(2), playingText.join(QLatin1Char(' ')));
+    equal("as many as the cap, in grid order", playingText.join(QLatin1Char(' ')), QStringLiteral("0 3 4 5 6 7"));
+
+    const QSize cell = GalleryView::thumbnailSizeForCell(QSize(40, 40));
+    check("frames are scaled to the cell", model.thumbnailAt(0).size() == cell,
+          QStringLiteral("%1x%2").arg(model.thumbnailAt(0).width()).arg(model.thumbnailAt(0).height()));
+
+    view.hide();
+    QCoreApplication::processEvents();
+    check("a hidden grid stops", animations.playingRows().isEmpty());
+    view.show();
+    spin(5000, [&]() { return animations.playingRows().size() == AnimatedThumbnails::kMaxPlaying; });
+    check("shown again, it plays again", animations.playingRows().size() == AnimatedThumbnails::kMaxPlaying);
+
+    animations.setEnabled(false);
+    check("turned off, nothing plays", animations.playingRows().isEmpty());
+    remoteColors.clear();
+    spin(300, []() { return false; });
+    check("and no frame arrives after", remoteColors.isEmpty());
+
+    animations.setEnabled(true);
+    spin(5000, [&]() { return !animations.playingRows().isEmpty(); });
+    model.clear();
+    check("new results stop the old rows", animations.playingRows().isEmpty());
+}
+
 // A booru.org post list, as steambanners.booru.org sends it (shortened):
 // a post linked twice, tags in the title, a png thumbnail.
 const QByteArray kBooruOrgListing = R"(
@@ -1641,6 +1805,7 @@ int main(int argc, char **argv)
     testDetectorEndToEnd();
     testGelbooruHtmlSource();
     testSiteAccess();
+    testAnimatedThumbnails();
     // Last: it changes the application palette.
     testTheme();
 

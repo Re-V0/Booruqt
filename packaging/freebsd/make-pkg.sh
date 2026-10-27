@@ -26,6 +26,7 @@ out="$3"
 
 # Dependencies at the versions this package was built against.
 qt_version=$(pkg query '%v' qt6-base)
+multimedia_version=$(pkg query '%v' qt6-multimedia)
 sqlite_driver_version=$(pkg query '%v' qt6-base_sqldriver-sqlite)
 
 manifest=$(mktemp)
@@ -45,6 +46,7 @@ licenses: [MPL20]
 categories: [graphics]
 deps: {
   qt6-base: { origin: "devel/qt6-base", version: "$qt_version" },
+  qt6-multimedia: { origin: "multimedia/qt6-multimedia", version: "$multimedia_version" },
   qt6-base_sqldriver-sqlite: { origin: "databases/qt6-base_sqldriver", version: "$sqlite_driver_version" }
 }
 EOF

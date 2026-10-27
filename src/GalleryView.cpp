@@ -102,7 +102,7 @@ void setCellSize(QListView *view, const QSize &size)
 // at the first row below the viewport. The cost is the visible rows, not the
 // whole model, which matters with autoscroll running every 40 ms over
 // thousands of rows.
-void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *loader)
+QVector<int> visibleRows(const QListView *view, const GalleryModel *model)
 {
     const int rowCount = model->rowCount();
     const int viewportHeight = view->viewport()->height();
@@ -117,11 +117,20 @@ void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *l
             high = mid;
     }
 
+    QVector<int> rows;
     for (int row = low; row < rowCount; ++row) {
-        const QModelIndex idx = model->index(row);
-        if (view->visualRect(idx).top() > viewportHeight)
+        if (view->visualRect(model->index(row)).top() > viewportHeight)
             break;
-        if (idx.data(GalleryModel::ThumbnailRequestedRole).toBool())
+        rows.append(row);
+    }
+    return rows;
+}
+
+void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *loader)
+{
+    const QVector<int> rows = visibleRows(view, model);
+    for (const int row : rows) {
+        if (model->index(row).data(GalleryModel::ThumbnailRequestedRole).toBool())
             continue;
         model->markThumbnailRequested(row);
         loader->request(row, QUrl(model->postAt(row).previewUrl));

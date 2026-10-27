@@ -311,6 +311,16 @@
         <translation>По размеру окна</translation>
     </message>
     <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="209"/>
+        <source>Nie udało się odtworzyć wideo: %1</source>
+        <translation>Не удалось воспроизвести видео: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="172"/>
+        <source>Nie udało się utworzyć pliku tymczasowego: %1</source>
+        <translation>Не удалось создать временный файл: %1</translation>
+    </message>
+    <message>
         <location filename="../src/ImageViewerDialog.cpp" line="73"/>
         <source>Nie udało się zdekodować obrazu.</source>
         <translation>Не удалось декодировать изображение.</translation>
@@ -319,6 +329,11 @@
         <location filename="../src/ImageViewerDialog.cpp" line="32"/>
         <source>Wczytywanie...</source>
         <translation>Загрузка...</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="185"/>
+        <source>Wczytywanie... %1%</source>
+        <translation>Загрузка... %1%</translation>
     </message>
 </context>
 <context>
@@ -582,6 +597,11 @@ Nie - pliki zostaną w starym miejscu i będą widoczne tylko w &quot;(wszystkie
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="151"/>
+        <source>Animowane miniatury (wideo, GIF)</source>
+        <translation>Анимированные миниатюры (видео, GIF)</translation>
+    </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="134"/>
         <location filename="../src/MainWindow.cpp" line="153"/>

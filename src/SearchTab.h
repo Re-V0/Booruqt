@@ -36,6 +36,7 @@ class LibraryDatabase;
 class DownloadManager;
 class GalleryModel;
 class ThumbnailLoader;
+class AnimatedThumbnails;
 class TagLineEdit;
 
 // The "Wyszukiwanie" tab: picks the sources, searches them, and shows the
@@ -58,6 +59,8 @@ public:
     void setThumbnailSliderValue(int value);
     // Shows a size chosen on either tab. Emits nothing.
     void applyThumbnailSize(int value);
+    // Video and GIF posts move in the grid (see AnimatedThumbnails).
+    void setAnimatedThumbnails(bool enabled);
 
 public slots:
     // Does nothing while no source is selected.
@@ -123,6 +126,7 @@ private:
 
     GalleryModel *m_model;
     ThumbnailLoader *m_thumbnailLoader;
+    AnimatedThumbnails *m_animations = nullptr;
     // Not owned.
     DownloadManager *m_downloadManager;
     QNetworkAccessManager *m_network;

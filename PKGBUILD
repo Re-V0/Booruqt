@@ -6,7 +6,7 @@ pkgdesc="Native Qt6 booru gallery client - browse, download and locally index bo
 arch=('x86_64')
 url="https://gitlab.com/re-v0/blairqt"
 license=('MPL-2.0')
-depends=('qt6-base')
+depends=('qt6-base' 'qt6-multimedia')
 optdepends=('python: run Python-scripted source plugins ("python" flavor)'
             'python-requests: Newgrounds example plugin'
             'python-argon2-cffi: Newgrounds example plugin'

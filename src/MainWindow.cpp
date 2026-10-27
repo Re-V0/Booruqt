@@ -6,6 +6,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "MainWindow.h"
+#include "AnimatedThumbnails.h"
 #include "DetailsPanel.h"
 #include "DownloadManager.h"
 #include "FolderAccessGuard.h"
@@ -61,6 +62,8 @@ MainWindow::MainWindow(QWidget *parent)
         + QStringLiteral("/blairqt");
     m_downloadManager->setDownloadDir(settings.value(QStringLiteral("downloadDir"), defaultDir).toString());
     m_libraryTab->refreshLibraryFolderTreeRoot();
+    m_searchTab->setAnimatedThumbnails(AnimatedThumbnails::enabledInSettings());
+    m_libraryTab->setAnimatedThumbnails(AnimatedThumbnails::enabledInSettings());
 
     // Read before applyThemeIconSize(): moving the slider saves its value.
     const int savedThumbnailSize = settings.value(QStringLiteral("thumbnailSize"), 0).toInt();
@@ -143,6 +146,16 @@ void MainWindow::buildUi()
     connect(openThemeAction, &QAction::triggered, this, &MainWindow::openThemeFile);
     QAction *reloadThemeAction = appearanceMenu->addAction(tr("Przeładuj motyw"));
     connect(reloadThemeAction, &QAction::triggered, this, &MainWindow::reloadTheme);
+    appearanceMenu->addSeparator();
+    // Off: only the zoom viewer plays video. On: the grid plays too.
+    QAction *animatedAction = appearanceMenu->addAction(tr("Animowane miniatury (wideo, GIF)"));
+    animatedAction->setCheckable(true);
+    animatedAction->setChecked(AnimatedThumbnails::enabledInSettings());
+    connect(animatedAction, &QAction::toggled, this, [this](bool enabled) {
+        AnimatedThumbnails::saveEnabledInSettings(enabled);
+        m_searchTab->setAnimatedThumbnails(enabled);
+        m_libraryTab->setAnimatedThumbnails(enabled);
+    });
 
     buildLanguageMenu(settingsMenu);
 
@@ -494,9 +507,9 @@ void MainWindow::showPostInDetailsPanel(const Post &post, const QPixmap &preview
         m_detailsDock->raise();
 }
 
-void MainWindow::onZoomRequested(const QString &imageUrl, const QString &title)
+void MainWindow::onZoomRequested(const QString &url, bool video, const QString &title)
 {
-    auto *viewer = new ImageViewerDialog(imageUrl, title, this);
+    auto *viewer = new ImageViewerDialog(url, video, title, this);
     viewer->show();
 }
 

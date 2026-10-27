@@ -311,6 +311,16 @@
         <translation>Fit to window</translation>
     </message>
     <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="209"/>
+        <source>Nie udało się odtworzyć wideo: %1</source>
+        <translation>Failed to play the video: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="172"/>
+        <source>Nie udało się utworzyć pliku tymczasowego: %1</source>
+        <translation>Failed to create a temporary file: %1</translation>
+    </message>
+    <message>
         <location filename="../src/ImageViewerDialog.cpp" line="73"/>
         <source>Nie udało się zdekodować obrazu.</source>
         <translation>Failed to decode the image.</translation>
@@ -319,6 +329,11 @@
         <location filename="../src/ImageViewerDialog.cpp" line="32"/>
         <source>Wczytywanie...</source>
         <translation>Loading...</translation>
+    </message>
+    <message>
+        <location filename="../src/ImageViewerDialog.cpp" line="185"/>
+        <source>Wczytywanie... %1%</source>
+        <translation>Loading... %1%</translation>
     </message>
 </context>
 <context>
@@ -582,6 +597,11 @@ No - the files stay where they are and are only visible under &quot;(all folders
 </context>
 <context>
     <name>MainWindow</name>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="151"/>
+        <source>Animowane miniatury (wideo, GIF)</source>
+        <translation>Animated thumbnails (video, GIF)</translation>
+    </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="134"/>
         <location filename="../src/MainWindow.cpp" line="153"/>
