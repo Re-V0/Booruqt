@@ -86,20 +86,20 @@ struct MediaLink {
 };
 
 // What the zoom viewer opens; an empty url means nothing. A downloaded file
-// always wins. A video post plays its video: the sample when the site made
-// a video sample (it is smaller), otherwise the original. An image post
-// shows the sample before the original, since originals can be tens of
-// megabytes.
+// always wins. A video sample plays first (it is smaller; on Danbooru it is
+// also what an ugoira, a zip of frames, plays as). Then a video post plays
+// its original. When a video post hides its original, its still sample or
+// thumbnail is shown instead. An image post shows the sample before the
+// original, since originals can be tens of megabytes.
 inline MediaLink viewerMedia(const Post &post)
 {
     const QString local = localImageUrl(post);
     if (!local.isEmpty())
         return {local, isVideoUrl(local)};
-    if (isVideoPost(post)) {
-        if (isVideoUrl(post.sampleUrl))
-            return {post.sampleUrl, true};
+    if (isVideoUrl(post.sampleUrl))
+        return {post.sampleUrl, true};
+    if (isVideoPost(post) && !post.fileUrl.isEmpty())
         return {post.fileUrl, true};
-    }
     const QStringList candidates = {post.sampleUrl, post.fileUrl, post.previewUrl};
     for (const QString &candidate : candidates) {
         if (!candidate.isEmpty() && !isVideoUrl(candidate))

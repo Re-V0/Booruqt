@@ -654,6 +654,20 @@ void testViewerUrls()
     shimmieVideo.fileExtension = QStringLiteral("webm");
     check("extension reported by the site makes a video", viewerMedia(shimmieVideo).video);
 
+    Post ugoira;
+    ugoira.sampleUrl = QStringLiteral("https://x.org/sample.webm");
+    ugoira.fileUrl = QStringLiteral("https://x.org/full.zip");
+    ugoira.fileExtension = QStringLiteral("zip");
+    equal("an ugoira plays its video sample, not the zip", viewerMedia(ugoira).url, ugoira.sampleUrl);
+    check("... as a video", viewerMedia(ugoira).video);
+
+    Post hiddenVideo;
+    hiddenVideo.previewUrl = QStringLiteral("https://x.org/thumb.jpg");
+    hiddenVideo.fileExtension = QStringLiteral("webm");
+    equal("a video without its original still shows the thumbnail", viewerMedia(hiddenVideo).url,
+          hiddenVideo.previewUrl);
+    check("... as an image", !viewerMedia(hiddenVideo).video);
+
     Post localVideo;
     localVideo.localFilePath = QStringLiteral("/home/u/clip.webm");
     localVideo.fileUrl = QStringLiteral("https://x.org/full.webm");
