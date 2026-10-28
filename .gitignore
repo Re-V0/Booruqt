@@ -10,3 +10,6 @@ __pycache__/
 *.log
 *.out
 docs/README.html
+.flatpak-builder/
+flatpak_app/
+*.flatpak

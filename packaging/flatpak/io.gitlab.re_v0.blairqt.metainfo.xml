@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2026 re-v0 -->
+<component type="desktop-application">
+  <id>io.gitlab.re_v0.blairqt</id>
+  <name>B.LAIR_QT</name>
+  <summary>Booru client with a local, tag-indexed library</summary>
+  <developer id="io.gitlab.re_v0">
+    <name>re-v0</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MPL-2.0</project_license>
+  <description>
+    <p>
+      Searches several boorus at once and downloads the originals into
+      ordinary folders. The tags go into a SQLite index next to the files,
+      so the folders stay usable by any other program.
+    </p>
+    <p>
+      Sites that are not on the list are usually one address away: the
+      program probes them against eight booru engines. Anything else takes
+      a short Python plugin.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.gitlab.re_v0.blairqt.desktop</launchable>
+  <url type="homepage">https://gitlab.com/re-v0/blairqt</url>
+  <url type="bugtracker">https://gitlab.com/re-v0/blairqt/-/issues</url>
+  <url type="donation">https://buymeacoffee.com/re_v0</url>
+  <content_rating type="oars-1.1"/>
+</component>

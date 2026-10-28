@@ -283,4 +283,27 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "libqt6sql6-sqlite")
 # Qt 6.4 (Ubuntu 24.04) plays video through GStreamer, which needs these
 # for WebM and MP4; newer Qt uses FFmpeg, which libqt6multimedia6 pulls in.
 set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "python3, gstreamer1.0-plugins-good, gstreamer1.0-libav")
+
+# Fedora package: `cpack -G RPM` in the build dir, after building with
+# -DCMAKE_INSTALL_PREFIX=/usr. rpmbuild finds the library dependencies
+# itself. The file is named the rpmbuild way, with the release's dist tag:
+# blairqt-<version>-1.fc44.x86_64.rpm.
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_PACKAGE_RELEASE 1)
+set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
+set(CPACK_RPM_PACKAGE_LICENSE "MPL-2.0")
+set(CPACK_RPM_PACKAGE_DESCRIPTION
+    "Browses several boorus at once and downloads the originals into ordinary folders, with the tags in a SQLite index next to them.")
+# The SQLite driver and the multimedia backend are Qt plugins, which
+# rpmbuild cannot see; both packages are named by hand.
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase, qt6-qtmultimedia")
+set(CPACK_RPM_PACKAGE_SUGGESTS "python3")
+# Directories that other packages own (filesystem, hicolor-icon-theme):
+# listing them in this package would make dnf report a conflict.
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+    /usr/share/applications
+    /usr/share/icons
+    /usr/share/icons/hicolor
+    /usr/share/icons/hicolor/scalable
+    /usr/share/icons/hicolor/scalable/apps)
 include(CPack)

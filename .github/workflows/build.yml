@@ -118,6 +118,83 @@ jobs:
           path: blairqt_*_amd64.deb
           if-no-files-found: error
 
+  rpm:
+    name: Fedora ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    # One .rpm per release, for the same reason as the .deb: rpmbuild writes
+    # the Qt version found at build time (libQt6Core.so.6(Qt_6.10)) as a
+    # requirement, which an older Fedora cannot meet.
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ['43', '44']
+    container: fedora:${{ matrix.release }}
+    steps:
+      - name: Install build tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git cmake ninja-build gcc-c++ rpm-build python3 \
+            qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qttools-devel qt6-linguist mesa-libGL-devel
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Build and test
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+
+      # The file is already named for its release: blairqt-<version>-1.fc44.x86_64.rpm.
+      - name: Package
+        run: |
+          cd build
+          cpack -G RPM
+          mv blairqt-[0-9]*.fc${{ matrix.release }}.x86_64.rpm ..
+
+      # Installs the package the way a user does, so a missing dependency or
+      # a conflict with a directory owned by another package fails here.
+      - name: Check the package
+        run: |
+          dnf install -y ./blairqt-[0-9]*.fc${{ matrix.release }}.x86_64.rpm
+          test -x /usr/bin/blairqt
+          test -f /usr/share/blairqt/translations/blairqt_en.qm
+          test -f /usr/share/blairqt/plugin_runner.py
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpm-fedora${{ matrix.release }}
+          path: blairqt-[0-9]*.fc${{ matrix.release }}.x86_64.rpm
+          if-no-files-found: error
+
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    # Flathub's image with flatpak-builder and the KDE runtime and SDK the
+    # manifest asks for. flatpak-builder sandboxes the build, which needs a
+    # privileged container.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Read the version
+        id: version
+        run: echo "version=$(sed -n 's/^project(blairqt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
+
+      # The bundle names Flathub as the place its runtime comes from, so
+      # `flatpak install` fetches the runtime by itself.
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/flatpak/io.gitlab.re_v0.blairqt.yml
+          bundle: blairqt-${{ steps.version.outputs.version }}-x86_64.flatpak
+          run-tests: true
+          artifact-name: flatpak
+
   windows:
     name: Windows
     runs-on: windows-latest

@@ -37,8 +37,27 @@ one for your system, then (with the version you downloaded):
 sudo pacman -U blairqt-<version>-1-x86_64.pkg.tar.zst       # Arch
 sudo apt install ./blairqt_<version>-debian13_amd64.deb     # Debian 13
 sudo apt install ./blairqt_<version>-ubuntu26.04_amd64.deb  # Ubuntu 26.04 (or -ubuntu24.04)
+sudo dnf install ./blairqt-<version>-1.fc44.x86_64.rpm      # Fedora 44 (or .fc43)
 sudo pkg add blairqt-<version>-freebsd15-amd64.pkg          # FreeBSD 15 (or -freebsd14)
+flatpak install --user ./blairqt-<version>-x86_64.flatpak   # any Linux with Flatpak
 ```
+
+Fedora ships FFmpeg without some patented codecs. If MP4 videos do not
+play, install the full FFmpeg from [RPM Fusion](https://rpmfusion.org):
+`sudo dnf swap ffmpeg-free ffmpeg --allowerasing`.
+
+The Flatpak fetches its runtime (KDE, Qt 6.10) from Flathub on install and
+starts with `flatpak run io.gitlab.re_v0.blairqt` or from the application
+menu. It sees your home folder and nothing outside it. For a library or a
+download folder on another drive, allow that path once:
+
+```bash
+flatpak override --user --filesystem=/mnt/data io.gitlab.re_v0.blairqt
+```
+
+Inside the Flatpak, Python plugins get the runtime's Python 3 and its
+standard library only, so a plugin that needs extra modules (such as the
+Newgrounds example) does not run there.
 
 Windows (64-bit): unpack `blairqt-<version>-windows-x64.zip` anywhere. Once
 per computer, run `vc_redist.x64.exe` from that folder: it installs the
@@ -80,8 +99,15 @@ emerge -av media-gfx/blairqt
 an interpreter for script plugins; `USE=test` runs the suite during the
 merge.
 
+Flatpak, from source — needs `flatpak-builder` and the Flathub remote:
+
+```bash
+flatpak-builder --user --install --force-clean --install-deps-from=flathub \
+  flatpak_app packaging/flatpak/io.gitlab.re_v0.blairqt.yml
+```
+
 Anything else — needs Qt 6 (Widgets, Network, Concurrent, Sql, Multimedia,
-LinguistTools), CMake 3.21+ and a C++20 compiler:
+MultimediaWidgets, LinguistTools), CMake 3.21+ and a C++20 compiler:
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -198,7 +224,9 @@ It listens on `127.0.0.1:8765`. Tick *This site has no API (dapi)* when adding
 the source. The packages ship the script too: `/usr/share/blairqt/tools/` on
 Linux, `/usr/local/share/blairqt/tools/` on FreeBSD, `tools\` next to
 `blairqt.exe` on Windows, `blairqt.app/Contents/Resources/tools/` on macOS.
-The tooltip of that checkbox shows the full path.
+The tooltip of that checkbox shows the full path. The Flatpak keeps its copy
+inside the sandbox, where Flask is not installed; run the one from this
+repository instead.
 
 ## Appearance and language
 
@@ -225,8 +253,9 @@ ctest --test-dir build --output-on-failure
 They cover blacklist matching, tag input, response parsing for every engine,
 source detection (against a local server playing each engine), the library
 (whole-tag search, paging, moving files, upgrading an older database),
-downloads, thumbnail loading, themes, the source list, and the rule that a
-plugin never blocks the GUI thread.
+downloads, thumbnail loading, which file the viewer plays, animated
+thumbnails (against a local server), themes, the source list, and the rule
+that a plugin never blocks the GUI thread.
 
 ## Data locations
 
@@ -237,6 +266,11 @@ Linux and FreeBSD:
 - Thumbnail cache: `~/.cache/blairqt/blairqt/blairqt/thumbnails/`
 - Downloads, until you pick another folder: `blairqt` in your pictures folder
   (`XDG_PICTURES_DIR`, usually `~/Pictures`)
+
+Flatpak: the same, with `~/.config`, `~/.local/share` and `~/.cache`
+replaced by `config`, `data` and `cache` in
+`~/.var/app/io.gitlab.re_v0.blairqt/`. Downloads go to the same pictures
+folder.
 
 Windows:
 
@@ -285,7 +319,8 @@ license, but modifications to the files themselves stay MPL and stay open.
 **Trademarks.** Qt is a registered trademark of The Qt Company Ltd. B.LAIR_QT
 is an independent project and is neither affiliated with nor endorsed by The
 Qt Company. It links the Qt 6 libraries dynamically under the LGPL-3.0. The
-Linux and FreeBSD packages use the Qt your system provides. The Windows zip and
+Linux and FreeBSD packages use the Qt your system provides, and the Flatpak
+the Qt of the KDE runtime. The Windows zip and
 the macOS app carry unmodified Qt libraries next to the program; replacing
 them with your own build of the same Qt version is allowed. Both carry the
 license texts (MPL-2.0, LGPL-3.0, GPL-3.0) in a `licenses` folder, with a

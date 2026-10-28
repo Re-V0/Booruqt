@@ -1,0 +1,55 @@
+# Flatpak manifest for B.LAIR_QT. Builds the source tree it sits in.
+#
+# The release workflow (.github/workflows/build.yml) builds a .flatpak
+# bundle from it. By hand, from the top of the repository:
+#
+#   flatpak-builder --user --install --force-clean --install-deps-from=flathub \
+#     flatpak_app packaging/flatpak/io.gitlab.re_v0.blairqt.yml
+#
+# The KDE runtime brings Qt 6 with Qt Multimedia (FFmpeg backend) and
+# Python 3 for script plugins.
+
+id: io.gitlab.re_v0.blairqt
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+command: blairqt
+rename-desktop-file: blairqt.desktop
+rename-icon: blairqt
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # The library lives in ordinary folders that the program moves files
+  # between, so it needs the real folders, not copies handed over by the
+  # file chooser portal. Folders outside the home folder (another drive)
+  # need an override; README.md says how.
+  - --filesystem=home
+
+modules:
+  - name: blairqt
+    buildsystem: cmake-ninja
+    # Builds inside flatpak-builder's copy of the sources, which is also
+    # where post-install finds the metainfo file.
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    # ctest; each test sets QT_QPA_PLATFORM=offscreen itself.
+    test-rule: test
+    sources:
+      - type: dir
+        path: ../..
+        # Build output and flatpak-builder's own folders, wherever they were
+        # made inside the source tree.
+        skip:
+          - .git
+          - .flatpak-builder
+          - flatpak_app
+          - repo
+          - build
+      - type: file
+        path: io.gitlab.re_v0.blairqt.metainfo.xml
+    post-install:
+      - install -Dm644 io.gitlab.re_v0.blairqt.metainfo.xml /app/share/metainfo/io.gitlab.re_v0.blairqt.metainfo.xml
