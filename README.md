@@ -90,8 +90,8 @@ Gentoo — drop the ebuild into a local overlay:
 
 ```bash
 mkdir -p /var/db/repos/local/media-gfx/blairqt
-cp blairqt-1.0.0.1.ebuild /var/db/repos/local/media-gfx/blairqt/
-ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-1.0.0.1.ebuild manifest
+cp blairqt-1.1.0.ebuild /var/db/repos/local/media-gfx/blairqt/
+ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-1.1.0.ebuild manifest
 emerge -av media-gfx/blairqt
 ```
 
