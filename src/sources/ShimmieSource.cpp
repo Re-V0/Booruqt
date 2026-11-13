@@ -35,7 +35,7 @@ QNetworkRequest ShimmieSource::buildSearchRequest(const QString &tags, int page,
     QUrl url(m_baseUrl + QStringLiteral("/index.php"));
     QUrlQuery query;
     query.addQueryItem(QStringLiteral("q"), QStringLiteral("api/danbooru/find_posts"));
-    query.addQueryItem(QStringLiteral("tags"), tags);
+    query.addQueryItem(QStringLiteral("tags"), queryValue(tags));
     // "page" is 1-based here; the API turns it into an offset of
     // (page - 1) * limit.
     query.addQueryItem(QStringLiteral("page"), QString::number(qMax(1, page)));
@@ -89,7 +89,7 @@ QNetworkRequest ShimmieSource::buildTagSuggestRequest(const QString &prefix) con
     QUrl url(m_baseUrl + QStringLiteral("/index.php"));
     QUrlQuery query;
     query.addQueryItem(QStringLiteral("q"), QStringLiteral("api/internal/autocomplete"));
-    query.addQueryItem(QStringLiteral("s"), prefix);
+    query.addQueryItem(QStringLiteral("s"), queryValue(prefix));
     url.setQuery(query);
 
     QNetworkRequest req(url);

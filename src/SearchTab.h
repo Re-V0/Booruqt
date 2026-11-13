@@ -10,11 +10,13 @@
 #include <QWidget>
 #include <QModelIndex>
 #include <QPixmap>
+#include <QPair>
 #include <QPoint>
 #include <QSet>
 #include <QSharedPointer>
 #include <QString>
 #include <QStringList>
+#include <QVector>
 #include <QNetworkRequest>
 
 #include "Post.h"
@@ -89,6 +91,7 @@ private slots:
     void requestVisibleThumbnails();
     void maybeAutoLoadNextPage();
     void onSourceComboChanged(int index);
+    void onSourceComboActivated(int index);
     void chooseMultipleSources();
     void deleteCurrentSource();
     void toggleAutoscroll(bool enabled);
@@ -113,6 +116,11 @@ private:
     void finishSearchRoundIfDone();
     // Cancels the in-flight search replies; their finished() is then ignored.
     void abortPendingSearchReplies();
+    // Empties the grid and drops whatever was still on its way into it.
+    void clearResults();
+    void showAddSourceDialog();
+    // Notes that a source gave no answer in this round.
+    void noteSourceError(const QString &sourceName, const QString &reason);
     void populateSourceCombo(const QString &selectName = {});
     void updateSourceSelectionUi();
     void updateDownloadButtonLabel();
@@ -152,6 +160,8 @@ private:
     QCheckBox *m_autoscrollCheck;
     QSlider *m_autoscrollSpeedSlider;
     QTimer *m_autoscrollTimer;
+    // Runs once the thumbnail size has stopped changing.
+    QTimer *m_thumbnailReloadTimer;
 
     // Tag autocomplete from the active source.
     QCompleter *m_tagCompleter = nullptr;
@@ -179,6 +189,14 @@ private:
     int m_autoLoadChain = 0;
     // Posts the sources returned before filtering; decides "end of results".
     int m_rawRoundCount = 0;
+    // Sources that answered in the current round, and the ones that did not
+    // (name, reason). The status bar shows the latter once the round ends.
+    int m_roundAnswers = 0;
+    QVector<QPair<QString, QString>> m_roundErrors;
+    // The last round got no answer at all, so m_currentPage is a page the
+    // view does not show: going forward asks for it again instead of
+    // skipping it.
+    bool m_lastRoundFailed = false;
     // Configurable in Settings; persisted in QSettings.
     int m_resultsPerPage = 40;
 };

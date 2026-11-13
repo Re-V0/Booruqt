@@ -81,6 +81,9 @@ MainWindow::MainWindow(QWidget *parent)
                     m_statusLabel->setText(tr("Zapisano: %1").arg(path));
                 else
                     m_statusLabel->setText(tr("Błąd pobierania: %1").arg(error));
+                // Also when skipped: a file found on disk is indexed again.
+                if (ok)
+                    m_libraryTab->noteLibraryChanged();
             });
 
     connect(&NetworkLog::instance(), &NetworkLog::entryAdded, m_logView, &QPlainTextEdit::appendPlainText);

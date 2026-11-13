@@ -247,7 +247,7 @@ void SourceDetector::startCandidate()
     }
 
     emit logLine(QStringLiteral("GET %1/ (front page)").arg(m_base));
-    QNetworkReply *reply = m_network->get(withUserAgent(QUrl(m_base + QLatin1Char('/'))));
+    QNetworkReply *reply = SiteAccess::getPrepared(m_network, withUserAgent(QUrl(m_base + QLatin1Char('/'))));
     const int generation = m_generation;
     connect(reply, &QNetworkReply::finished, this, [this, reply, generation]() {
         reply->deleteLater();
@@ -400,7 +400,7 @@ void SourceDetector::sendProbeNow(QNetworkRequest request, const QString &flavor
     emit logLine(QStringLiteral("[%1] GET %2").arg(flavor, shownUrl));
     NetworkLog::instance().log(QStringLiteral("(source test) GET %1").arg(shownUrl));
 
-    QNetworkReply *reply = m_network->get(request);
+    QNetworkReply *reply = SiteAccess::getPrepared(m_network, request);
     const int generation = m_generation;
     connect(reply, &QNetworkReply::finished, this, [this, reply, flavor, generation]() {
         reply->deleteLater();

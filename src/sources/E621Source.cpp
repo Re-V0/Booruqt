@@ -25,7 +25,7 @@ QNetworkRequest E621Source::buildSearchRequest(const QString &tags, int page, in
 {
     QUrl url(m_baseUrl + QStringLiteral("/posts.json"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("tags"), tags);
+    query.addQueryItem(QStringLiteral("tags"), queryValue(tags));
     query.addQueryItem(QStringLiteral("page"), QString::number(page));
     query.addQueryItem(QStringLiteral("limit"), QString::number(perPage));
     url.setQuery(query);
@@ -92,7 +92,7 @@ QNetworkRequest E621Source::buildTagSuggestRequest(const QString &prefix) const
 {
     QUrl url(m_baseUrl + QStringLiteral("/tags/autocomplete.json"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("search[name_matches]"), prefix);
+    query.addQueryItem(QStringLiteral("search[name_matches]"), queryValue(prefix));
     url.setQuery(query);
 
     QNetworkRequest req(url);

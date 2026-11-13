@@ -25,7 +25,7 @@ QNetworkRequest SzurubooruSource::buildSearchRequest(const QString &tags, int pa
 {
     QUrl url(m_baseUrl + QStringLiteral("/api/posts/"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("query"), tags);
+    query.addQueryItem(QStringLiteral("query"), queryValue(tags));
     query.addQueryItem(QStringLiteral("offset"), QString::number(qMax(0, (page - 1) * perPage)));
     query.addQueryItem(QStringLiteral("limit"), QString::number(perPage));
     url.setQuery(query);

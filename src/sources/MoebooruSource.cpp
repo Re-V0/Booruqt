@@ -25,7 +25,7 @@ QNetworkRequest MoebooruSource::buildSearchRequest(const QString &tags, int page
 {
     QUrl url(m_baseUrl + QStringLiteral("/post.json"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("tags"), tags);
+    query.addQueryItem(QStringLiteral("tags"), queryValue(tags));
     query.addQueryItem(QStringLiteral("page"), QString::number(page));
     query.addQueryItem(QStringLiteral("limit"), QString::number(perPage));
     url.setQuery(query);
@@ -70,7 +70,7 @@ QNetworkRequest MoebooruSource::buildTagSuggestRequest(const QString &prefix) co
 {
     QUrl url(m_baseUrl + QStringLiteral("/tag.json"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("name"), prefix);
+    query.addQueryItem(QStringLiteral("name"), queryValue(prefix));
     query.addQueryItem(QStringLiteral("order"), QStringLiteral("count"));
     query.addQueryItem(QStringLiteral("limit"), QStringLiteral("10"));
     url.setQuery(query);

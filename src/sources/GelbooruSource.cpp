@@ -34,8 +34,8 @@ QNetworkRequest GelbooruSource::buildSearchRequest(const QString &tags, int page
     if (!m_htmlBridgeUrl.isEmpty()) {
         QUrl url(m_htmlBridgeUrl + QStringLiteral("/scrape_gelbooru_html"));
         QUrlQuery query;
-        query.addQueryItem(QStringLiteral("base_url"), m_baseUrl);
-        query.addQueryItem(QStringLiteral("tags"), tags);
+        query.addQueryItem(QStringLiteral("base_url"), queryValue(m_baseUrl));
+        query.addQueryItem(QStringLiteral("tags"), queryValue(tags));
         query.addQueryItem(QStringLiteral("page"), QString::number(page));
         query.addQueryItem(QStringLiteral("limit"), QString::number(perPage));
         url.setQuery(query);
@@ -48,14 +48,14 @@ QNetworkRequest GelbooruSource::buildSearchRequest(const QString &tags, int page
     query.addQueryItem(QStringLiteral("s"), QStringLiteral("post"));
     query.addQueryItem(QStringLiteral("q"), QStringLiteral("index"));
     query.addQueryItem(QStringLiteral("json"), QStringLiteral("1"));
-    query.addQueryItem(QStringLiteral("tags"), tags);
+    query.addQueryItem(QStringLiteral("tags"), queryValue(tags));
     // dapi pagination is 0-indexed
     query.addQueryItem(QStringLiteral("pid"), QString::number(qMax(0, page - 1)));
     query.addQueryItem(QStringLiteral("limit"), QString::number(perPage));
     if (!m_apiKey.isEmpty())
-        query.addQueryItem(QStringLiteral("api_key"), m_apiKey);
+        query.addQueryItem(QStringLiteral("api_key"), queryValue(m_apiKey));
     if (!m_userId.isEmpty())
-        query.addQueryItem(QStringLiteral("user_id"), m_userId);
+        query.addQueryItem(QStringLiteral("user_id"), queryValue(m_userId));
     url.setQuery(query);
 
     QNetworkRequest req(url);
@@ -181,7 +181,7 @@ QNetworkRequest GelbooruSource::buildTagSuggestRequest(const QString &prefix) co
 
     QUrl url(m_baseUrl + QStringLiteral("/autocomplete.php"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("q"), prefix);
+    query.addQueryItem(QStringLiteral("q"), queryValue(prefix));
     url.setQuery(query);
 
     QNetworkRequest req(url);

@@ -45,10 +45,12 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
+#include <QShowEvent>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
 #include <QStringListModel>
+#include <QTimer>
 #include <QTreeView>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -56,6 +58,9 @@
 namespace {
 
 constexpr int kLibraryPageSize = 300;
+constexpr int kTagSuggestDelayMs = 120;
+// Downloads of one batch finish one after another; the list is read once.
+constexpr int kLibraryRefreshDelayMs = 500;
 
 // rename() fails across filesystems; falls back to copy + remove.
 bool moveFile(const QString &from, const QString &to)
@@ -110,6 +115,18 @@ LibraryTab::LibraryTab(LibraryDatabase *library, DownloadManager *downloadManage
         searchLibrary();
     });
 
+    m_thumbnailReloadTimer = new QTimer(this);
+    m_thumbnailReloadTimer->setSingleShot(true);
+    m_thumbnailReloadTimer->setInterval(GalleryView::kThumbnailReloadDelayMs);
+    connect(m_thumbnailReloadTimer, &QTimer::timeout, this, [this]() {
+        GalleryView::reloadThumbnails(m_libraryView, m_libraryModel, m_libraryThumbnailLoader);
+    });
+
+    m_libraryRefreshTimer = new QTimer(this);
+    m_libraryRefreshTimer->setSingleShot(true);
+    m_libraryRefreshTimer->setInterval(kLibraryRefreshDelayMs);
+    connect(m_libraryRefreshTimer, &QTimer::timeout, this, &LibraryTab::refreshIfLibraryChanged);
+
     // Delete key removes selected library items, scoped to focus.
     auto *deleteShortcut = new QShortcut(QKeySequence::Delete, m_libraryView);
     deleteShortcut->setContext(Qt::WidgetShortcut);
@@ -129,9 +146,41 @@ void LibraryTab::applyThumbnailSize(int value)
         const QSignalBlocker blocker(m_librarySizeSlider);
         m_librarySizeSlider->setValue(value);
     }
-    m_libraryThumbnailLoader->setTargetSize(GalleryView::thumbnailSizeForCell(size));
+    const QSize thumbnailSize = GalleryView::thumbnailSizeForCell(size);
+    // Thumbnails already shown were decoded for the old size: too small ones
+    // would stay blurred, too large ones would be scaled on every repaint.
+    if (thumbnailSize != m_libraryThumbnailLoader->targetSize() && m_libraryModel->rowCount() > 0)
+        m_thumbnailReloadTimer->start();
+    m_libraryThumbnailLoader->setTargetSize(thumbnailSize);
     GalleryView::setCellSize(m_libraryView, size);
     requestVisibleLibraryThumbnails();
+}
+
+void LibraryTab::noteLibraryChanged()
+{
+    m_libraryChanged = true;
+    m_libraryRefreshTimer->start();
+}
+
+void LibraryTab::refreshIfLibraryChanged()
+{
+    if (!m_libraryChanged)
+        return;
+    // Reading the list again drops the selection and scrolls to the top.
+    const bool untouched = !m_libraryView->selectionModel()->hasSelection()
+        && m_libraryView->verticalScrollBar()->value() == 0;
+    // Hidden: showEvent() reads it. Being worked with: it stays marked for
+    // showEvent() or the next search.
+    if (!isVisible() || !untouched)
+        return;
+    searchLibrary();
+}
+
+void LibraryTab::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    if (m_libraryChanged)
+        searchLibrary();
 }
 
 void LibraryTab::setupTagCompleter()
@@ -146,6 +195,11 @@ void LibraryTab::setupTagCompleter()
     connect(m_libraryTagCompleter, QOverload<const QString &>::of(&QCompleter::activated), this,
             [this](const QString &tag) { m_libraryTagsEdit->acceptCompletion(tag); });
     connect(m_libraryTagsEdit, &QLineEdit::textEdited, this, &LibraryTab::onLibraryTagsEdited);
+
+    m_libraryTagSuggestTimer = new QTimer(this);
+    m_libraryTagSuggestTimer->setSingleShot(true);
+    m_libraryTagSuggestTimer->setInterval(kTagSuggestDelayMs);
+    connect(m_libraryTagSuggestTimer, &QTimer::timeout, this, &LibraryTab::showLibraryTagSuggestions);
 
     // Installed after QCompleter's own filter, so this one sees keys first.
     m_libraryTagCompleter->popup()->installEventFilter(this);
@@ -174,9 +228,19 @@ void LibraryTab::onLibraryTagsEdited()
 {
     const QString token = m_libraryTagsEdit->currentToken();
     if (token.size() < 2 || !m_library) {
+        m_libraryTagSuggestTimer->stop();
         m_libraryTagCompleter->popup()->hide();
         return;
     }
+    m_libraryTagSuggestTimer->start();
+}
+
+void LibraryTab::showLibraryTagSuggestions()
+{
+    // Read again: the text may have changed while the timer ran.
+    const QString token = m_libraryTagsEdit->currentToken();
+    if (token.size() < 2 || !m_library)
+        return;
     showTagSuggestions(m_libraryTagCompleter, m_library->suggestTags(token, 10), token);
 }
 
@@ -254,6 +318,8 @@ void LibraryTab::buildUi()
     auto *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(m_libraryTreePane);
     m_libraryView = new QListView(splitter);
+    // The object names are for the tests, which find the widgets by them.
+    m_libraryView->setObjectName(QStringLiteral("libraryView"));
     m_libraryView->setModel(m_libraryModel);
     GalleryView::configure(m_libraryView);
     splitter->addWidget(m_libraryView);
@@ -262,6 +328,7 @@ void LibraryTab::buildUi()
     rootLayout->addWidget(splitter, 1);
 
     m_libraryStatusLabel = new QLabel(this);
+    m_libraryStatusLabel->setObjectName(QStringLiteral("libraryStatusLabel"));
     rootLayout->addWidget(m_libraryStatusLabel);
 }
 
@@ -401,6 +468,10 @@ void LibraryTab::fetchLibraryPage(bool append)
         m_libraryLastId = 0;
         m_libraryThumbnailLoader->cancelAll();
         m_libraryModel->clear();
+        // The new rows are requested at the current size from the start.
+        m_thumbnailReloadTimer->stop();
+        m_libraryChanged = false;
+        m_libraryRefreshTimer->stop();
     }
     const QString query = m_libraryTagsEdit->text().trimmed();
 
@@ -801,12 +872,15 @@ void LibraryTab::showLibraryContextMenu(const QPoint &pos)
 
         menu.addSeparator();
 
-        QAction *copyImageAction = menu.addAction(tr("Kopiuj obraz do schowka"));
-        connect(copyImageAction, &QAction::triggered, this, [path]() {
-            const QImage image(path);
-            if (!image.isNull())
-                QGuiApplication::clipboard()->setImage(image);
-        });
+        // Not for a video: there is no image in it to copy.
+        if (!clipboardImageUrl(post).isEmpty()) {
+            QAction *copyImageAction = menu.addAction(tr("Kopiuj obraz do schowka"));
+            connect(copyImageAction, &QAction::triggered, this, [path]() {
+                const QImage image(path);
+                if (!image.isNull())
+                    QGuiApplication::clipboard()->setImage(image);
+            });
+        }
 
         QAction *copyPathAction = menu.addAction(tr("Kopiuj ścieżkę pliku"));
         connect(copyPathAction, &QAction::triggered, this, [path]() {
@@ -871,13 +945,18 @@ void LibraryTab::deleteSelectedLibraryItems()
 
     QList<int> rows;
     int failed = 0;
+    // Files outside the allowed folders: their index entry goes, they stay.
+    int leftOnDisk = 0;
     for (const QModelIndex &idx : selected) {
         const Post &post = m_libraryModel->postAt(idx.row());
         if (!post.localFilePath.isEmpty()) {
             // Only the actual disk write is allow-list-gated - a stale/orphaned
             // DB row (file already gone, or outside the allow-list) must still
             // be removable, since that's just our own index, not a filesystem write.
-            if (FolderAccessGuard::isAllowed(post.localFilePath) && QFile::exists(post.localFilePath)) {
+            const bool exists = QFile::exists(post.localFilePath);
+            if (exists && !FolderAccessGuard::isAllowed(post.localFilePath)) {
+                ++leftOnDisk;
+            } else if (exists) {
                 // A file that stays on disk keeps its row: dropping only the
                 // index entry would hide a file the user believes is gone.
                 if (!QFile::remove(post.localFilePath)) {
@@ -899,9 +978,14 @@ void LibraryTab::deleteSelectedLibraryItems()
     m_libraryModel->resetMissingThumbnails();
     requestVisibleLibraryThumbnails();
     QString status = tr("Usunięto %1 plik(ów) (%2 wszystkich w bibliotece).")
-        .arg(rows.size()).arg(m_library ? m_library->count() : 0);
+        .arg(rows.size() - leftOnDisk).arg(m_library ? m_library->count() : 0);
     if (failed > 0)
         status += QLatin1Char(' ') + tr("%1 nie dało się usunąć (brak uprawnień?).").arg(failed);
+    // Without this the user would take a file that is still there for gone.
+    if (leftOnDisk > 0) {
+        status += QLatin1Char(' ') + tr("%1 usunięto tylko z biblioteki - plik został na dysku, "
+                                        "bo leży poza dozwolonymi folderami.").arg(leftOnDisk);
+    }
     m_libraryStatusLabel->setText(status);
     emit postsDeleted();
 }

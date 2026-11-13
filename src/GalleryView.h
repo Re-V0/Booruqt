@@ -21,7 +21,8 @@ namespace GalleryView {
 constexpr int kDefaultThumbnailSize = 220;
 
 // Thumbnails are decoded at exactly the size they are drawn at, so painting
-// never has to rescale them.
+// does not have to rescale them. After the cell size changed they no longer
+// are, until reloadThumbnails() has fetched them again.
 QSize thumbnailSizeForCell(const QSize &cell);
 
 // Icon mode, extended selection, a custom context menu, and the delegate,
@@ -36,5 +37,14 @@ QVector<int> visibleRows(const QListView *view, const GalleryModel *model);
 
 // Requests thumbnails for the rows inside the viewport.
 void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *loader);
+
+// Fetches every thumbnail again at the loader's current target size: the
+// visible rows now, the others when they scroll into view. What is on screen
+// stays there, scaled, until its replacement arrives.
+void reloadThumbnails(QListView *view, GalleryModel *model, ThumbnailLoader *loader);
+
+// How long the size slider must rest before reloadThumbnails() runs: a drag
+// passes through dozens of sizes, and each reload decodes every visible row.
+constexpr int kThumbnailReloadDelayMs = 250;
 
 } // namespace GalleryView

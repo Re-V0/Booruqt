@@ -54,7 +54,7 @@ QNetworkRequest GelbooruHtmlSource::buildSearchRequest(const QString &tags, int 
     query.addQueryItem(QStringLiteral("page"), QStringLiteral("post"));
     query.addQueryItem(QStringLiteral("s"), QStringLiteral("list"));
     // An empty search lists nothing here; "all" lists everything.
-    query.addQueryItem(QStringLiteral("tags"), tags.trimmed().isEmpty() ? QStringLiteral("all") : tags.trimmed());
+    query.addQueryItem(QStringLiteral("tags"), tags.trimmed().isEmpty() ? QStringLiteral("all") : queryValue(tags.trimmed()));
     query.addQueryItem(QStringLiteral("pid"), QString::number(qMax(0, page - 1) * kPostsPerPage));
     url.setQuery(query);
 

@@ -269,6 +269,16 @@
 <context>
     <name>DownloadManager</name>
     <message>
+        <location filename="../src/DownloadManager.cpp" line="113"/>
+        <source>nie można utworzyć folderu pobierania %1</source>
+        <translation>cannot create the download folder %1</translation>
+    </message>
+    <message>
+        <location filename="../src/DownloadManager.cpp" line="204"/>
+        <source>przekierowanie na inną stronę (%1) odrzucone</source>
+        <translation>redirect to another site (%1) refused</translation>
+    </message>
+    <message>
         <location filename="../src/DownloadManager.cpp" line="152"/>
         <source>serwer zwrócił stronę WWW zamiast pliku (Cloudflare albo wymagane logowanie?)</source>
         <translation>the server sent a web page instead of the file (Cloudflare, or a login required?)</translation>
@@ -338,6 +348,11 @@
 </context>
 <context>
     <name>LibraryTab</name>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="986"/>
+        <source>%1 usunięto tylko z biblioteki - plik został na dysku, bo leży poza dozwolonymi folderami.</source>
+        <translation>%1 removed from the library only - the file stays on disk, because it is outside the allowed folders.</translation>
+    </message>
     <message>
         <location filename="../src/LibraryTab.cpp" line="896"/>
         <source>%1 nie dało się usunąć (brak uprawnień?).</source>
@@ -783,6 +798,26 @@ No - the files stay where they are and are only visible under &quot;(all folders
 </context>
 <context>
     <name>SearchTab</name>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="71"/>
+        <source>przekierowanie na inną stronę (%1) odrzucone</source>
+        <translation>redirect to another site (%1) refused</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="759"/>
+        <source>nie udało się zbudować zapytania</source>
+        <translation>the request could not be built</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="804"/>
+        <source>- bez odpowiedzi: %1 (szczegóły w logu sieciowym)</source>
+        <translation>- no answer from: %1 (details in the network log)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="811"/>
+        <source>Autoscroll zatrzymany.</source>
+        <translation>Autoscroll stopped.</translation>
+    </message>
     <message>
         <location filename="../src/SearchTab.cpp" line="693"/>
         <source>%1: %2 wyników w widoku (strona %3, +%4)</source>

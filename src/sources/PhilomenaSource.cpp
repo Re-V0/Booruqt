@@ -50,7 +50,7 @@ QNetworkRequest PhilomenaSource::buildSearchRequest(const QString &tags, int pag
     for (const QString &tag : tags.split(QLatin1Char(' '), Qt::SkipEmptyParts))
         apiTags.append(tagToApi(tag));
     const QString commaTags = apiTags.join(QStringLiteral(", "));
-    query.addQueryItem(QStringLiteral("q"), commaTags.isEmpty() ? QStringLiteral("*") : commaTags);
+    query.addQueryItem(QStringLiteral("q"), commaTags.isEmpty() ? QStringLiteral("*") : queryValue(commaTags));
     query.addQueryItem(QStringLiteral("page"), QString::number(page));
     // Page-based paging, so a capped page size stays consistent across pages.
     query.addQueryItem(QStringLiteral("per_page"), QString::number(qMin(perPage, kMaxPerPage)));
@@ -113,7 +113,7 @@ QNetworkRequest PhilomenaSource::buildTagSuggestRequest(const QString &prefix) c
 {
     QUrl url(m_baseUrl + QStringLiteral("/api/v1/json/search/tags"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("q"), tagToApi(prefix) + QLatin1Char('*'));
+    query.addQueryItem(QStringLiteral("q"), queryValue(tagToApi(prefix) + QLatin1Char('*')));
     query.addQueryItem(QStringLiteral("per_page"), QStringLiteral("10"));
     url.setQuery(query);
 

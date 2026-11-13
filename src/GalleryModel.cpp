@@ -110,3 +110,8 @@ void GalleryModel::resetMissingThumbnails()
             m_requested[row] = false;
     }
 }
+
+void GalleryModel::requestThumbnailsAgain()
+{
+    m_requested.fill(false);
+}

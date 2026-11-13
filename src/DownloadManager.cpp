@@ -105,6 +105,15 @@ void DownloadManager::download(const Post &post)
         }
     }
 
+    // The download folder is an allowed one by definition - choosing it grants
+    // it - so it is created again if it has vanished since. Before the check
+    // below: the guard cannot place a file whose folder does not exist.
+    if (!QDir().mkpath(m_downloadDir)) {
+        emit downloadFinished(QString(), false, false,
+            tr("nie można utworzyć folderu pobierania %1").arg(m_downloadDir));
+        return;
+    }
+
     const QString path = targetFilePath(post);
     if (!FolderAccessGuard::isAllowed(path)) {
         NetworkLog::instance().log(QStringLiteral("  -> REFUSED: %1 is outside the allowed folders").arg(path));
@@ -112,8 +121,6 @@ void DownloadManager::download(const Post &post)
             tr("folder pobierania jest poza dozwolonym zakresem dostępu"));
         return;
     }
-
-    QDir().mkpath(m_downloadDir);
 
     if (QFile::exists(path)) {
         // Already on disk - re-index it in case the DB predates it.
@@ -123,19 +130,35 @@ void DownloadManager::download(const Post &post)
         return;
     }
 
-    // A second click while the first download still runs: both would write
-    // the same file.
+    // A second click while the first download still runs or waits: both
+    // would write the same file.
     if (m_inFlight.contains(path)) {
         NetworkLog::instance().log(QStringLiteral("  -> already downloading %1").arg(path));
         return;
     }
 
+    m_inFlight.insert(path);
+    m_queue.append({post, path});
+    startQueued();
+}
+
+void DownloadManager::startQueued()
+{
+    while (m_running < kMaxParallel && !m_queue.isEmpty()) {
+        const Queued next = m_queue.takeFirst();
+        start(next.post, next.path);
+    }
+}
+
+void DownloadManager::start(const Post &post, const QString &path)
+{
     // QSaveFile writes to a temporary file next to the target and renames it
     // only on commit(). A crash or a broken connection therefore leaves no
     // half file behind that a later QFile::exists() would take as done.
     auto *file = new QSaveFile(path);
     if (!file->open(QIODevice::WriteOnly)) {
         delete file;
+        m_inFlight.remove(path);
         emit downloadFinished(QString(), false, false, tr("nie można zapisać %1").arg(path));
         return;
     }
@@ -144,12 +167,12 @@ void DownloadManager::download(const Post &post)
 
     QNetworkRequest req{QUrl(post.fileUrl)};
     req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
-    req.setTransferTimeout(30000);
-    SiteAccess::apply(req);
+    // Set only now, when the request is really sent.
+    req.setTransferTimeout(m_transferTimeoutMs);
 
-    QNetworkReply *reply = m_manager->get(req);
+    QNetworkReply *reply = SiteAccess::get(m_manager, req);
     file->setParent(reply); // deleted together with the reply
-    m_inFlight.insert(path);
+    ++m_running;
 
     // Written as it arrives, so a large video is never held in memory whole.
     connect(reply, &QNetworkReply::readyRead, reply, [reply, file]() {
@@ -164,6 +187,9 @@ void DownloadManager::download(const Post &post)
     connect(reply, &QNetworkReply::finished, this, [this, reply, file, path, post]() {
         reply->deleteLater();
         m_inFlight.remove(path);
+        // The slot goes to the next one in the queue, however this one ended.
+        --m_running;
+        startQueued();
 
         if (file->error() != QFileDevice::NoError) {
             NetworkLog::instance().log(QStringLiteral("  -> ERROR writing %1: %2").arg(path, file->errorString()));
@@ -172,8 +198,12 @@ void DownloadManager::download(const Post &post)
         }
         if (reply->error() != QNetworkReply::NoError) {
             file->cancelWriting();
-            NetworkLog::instance().log(QStringLiteral("  -> ERROR downloading: %1").arg(reply->errorString()));
-            emit downloadFinished(QString(), false, false, reply->errorString());
+            const QString refused = SiteAccess::refusedRedirect(reply);
+            const QString reason = refused.isEmpty()
+                ? reply->errorString()
+                : tr("przekierowanie na inną stronę (%1) odrzucone").arg(QUrl(refused).host());
+            NetworkLog::instance().log(QStringLiteral("  -> ERROR downloading: %1").arg(reason));
+            emit downloadFinished(QString(), false, false, reason);
             return;
         }
 

@@ -19,6 +19,8 @@
 namespace {
 
 constexpr int kSchemaVersion = 2;
+// See LibraryDatabase::cappedTagCount().
+constexpr int kTagCountCap = 1000;
 
 QString escapeLike(QString value)
 {
@@ -280,18 +282,39 @@ QVector<Post> LibraryDatabase::search(const QString &tagQuery, int limit, qint64
             dirPrefix += QLatin1Char('/');
     }
 
+    // With tags, the search walks the rows of one of them - the rarest, so
+    // the walk is short - newest post first, and keeps the posts that also
+    // have every other term. post_tags is keyed (tag, post_id), so for one
+    // tag its rows already come in post order: a page is read off the top
+    // without collecting and sorting every match first. Starting from the
+    // rarest matters as much: a common tag in front would be walked row by
+    // row in search of the few posts that also carry the rare one.
+    QStringList ordered = terms;
+    if (ordered.size() > 1) {
+        int rarest = 0;
+        int rarestCount = -1;
+        for (int i = 0; i < ordered.size(); ++i) {
+            const int uses = cappedTagCount(ordered.at(i));
+            if (rarestCount < 0 || uses < rarestCount) {
+                rarest = i;
+                rarestCount = uses;
+            }
+        }
+        ordered.move(rarest, 0);
+    }
+
+    // Without tags the id is the posts table's own; with them it is read
+    // from the tag row the walk is on.
+    const QString idColumn = ordered.isEmpty() ? QStringLiteral("posts.id") : QStringLiteral("first.post_id");
+
     QStringList where;
+    if (!ordered.isEmpty())
+        where << QStringLiteral("first.tag = :tag0");
     if (beforeId > 0)
-        where << QStringLiteral("posts.id < :before_id");
-    if (!terms.isEmpty()) {
-        // A post qualifies when it has every term: one post_tags row matched
-        // per term, so the count of matches equals the number of terms.
-        QStringList placeholders;
-        for (int i = 0; i < terms.size(); ++i)
-            placeholders << QStringLiteral(":tag%1").arg(i);
-        where << QStringLiteral("posts.id IN (SELECT post_id FROM post_tags WHERE tag IN (%1) "
-                                "GROUP BY post_id HAVING COUNT(*) = :tag_count)")
-                     .arg(placeholders.join(QStringLiteral(", ")));
+        where << idColumn + QStringLiteral(" < :before_id");
+    for (int i = 1; i < ordered.size(); ++i) {
+        where << QStringLiteral("EXISTS (SELECT 1 FROM post_tags WHERE tag = :tag%1 AND post_id = first.post_id)")
+                     .arg(i);
     }
     if (!dirPrefix.isEmpty()) {
         // substr() instead of LIKE: LIKE ignores ASCII case, and on Linux
@@ -301,19 +324,21 @@ QVector<Post> LibraryDatabase::search(const QString &tagQuery, int limit, qint64
             where << QStringLiteral("instr(substr(posts.file_path, length(:dir_c) + 1), '/') = 0");
     }
 
-    QString sql = QStringLiteral("SELECT posts.* FROM posts");
+    // CROSS JOIN fixes the order of the two tables: SQLite would otherwise be
+    // free to start from posts and look every one of them up in post_tags.
+    QString sql = ordered.isEmpty()
+        ? QStringLiteral("SELECT posts.* FROM posts")
+        : QStringLiteral("SELECT posts.* FROM post_tags AS first CROSS JOIN posts ON posts.id = first.post_id");
     if (!where.isEmpty())
         sql += QStringLiteral(" WHERE ") + where.join(QStringLiteral(" AND "));
-    sql += QStringLiteral(" ORDER BY posts.id DESC LIMIT :limit");
+    sql += QStringLiteral(" ORDER BY ") + idColumn + QStringLiteral(" DESC LIMIT :limit");
 
     QSqlQuery q(m_db);
     q.prepare(sql);
     if (beforeId > 0)
         q.bindValue(QStringLiteral(":before_id"), beforeId);
-    for (int i = 0; i < terms.size(); ++i)
-        q.bindValue(QStringLiteral(":tag%1").arg(i), terms.at(i));
-    if (!terms.isEmpty())
-        q.bindValue(QStringLiteral(":tag_count"), int(terms.size()));
+    for (int i = 0; i < ordered.size(); ++i)
+        q.bindValue(QStringLiteral(":tag%1").arg(i), ordered.at(i));
     if (!dirPrefix.isEmpty()) {
         q.bindValue(QStringLiteral(":dir_a"), dirPrefix);
         q.bindValue(QStringLiteral(":dir_b"), dirPrefix);
@@ -330,6 +355,20 @@ QVector<Post> LibraryDatabase::search(const QString &tagQuery, int limit, qint64
     while (q.next())
         results.append(postFromQuery(q));
     return results;
+}
+
+int LibraryDatabase::cappedTagCount(const QString &tag) const
+{
+    // Only "which term is the rarest" is asked, so counting stops early: a
+    // tag on half the library is not counted through.
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+        "SELECT COUNT(*) FROM (SELECT 1 FROM post_tags WHERE tag = :tag LIMIT :cap)"));
+    q.bindValue(QStringLiteral(":tag"), tag);
+    q.bindValue(QStringLiteral(":cap"), kTagCountCap);
+    if (q.exec() && q.next())
+        return q.value(0).toInt();
+    return kTagCountCap;
 }
 
 QString LibraryDatabase::pathForPost(const QString &source, const QString &postId) const

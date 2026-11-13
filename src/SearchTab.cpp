@@ -26,6 +26,7 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QCompleter>
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -61,6 +62,21 @@ constexpr int kSearchTimeoutMs = 45000;
 constexpr int kAutoscrollIntervalMs = 40;
 constexpr int kInfiniteScrollThresholdPx = 80;
 
+// Why a request failed, without its address: Qt's own text for an HTTP error
+// quotes the whole URL, API key included.
+QString failureText(const QNetworkReply *reply, int httpStatus)
+{
+    const QString refused = SiteAccess::refusedRedirect(reply);
+    if (!refused.isEmpty()) {
+        return QCoreApplication::translate("SearchTab", "przekierowanie na inną stronę (%1) odrzucone")
+            .arg(QUrl(refused).host());
+    }
+    if (httpStatus < 400)
+        return reply->errorString();
+    const QString phrase = reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
+    return QStringLiteral("HTTP %1 %2").arg(httpStatus).arg(phrase).trimmed();
+}
+
 } // namespace
 
 SearchTab::SearchTab(SourceManager &sourceManager, LibraryDatabase *library,
@@ -92,6 +108,7 @@ SearchTab::SearchTab(SourceManager &sourceManager, LibraryDatabase *library,
     connect(m_nextPageButton, &QPushButton::clicked, this, &SearchTab::onNextPage);
     connect(m_pageSpin, &QSpinBox::editingFinished, this, &SearchTab::onPageSpinEditingFinished);
     connect(m_sourceCombo, &QComboBox::currentIndexChanged, this, &SearchTab::onSourceComboChanged);
+    connect(m_sourceCombo, &QComboBox::activated, this, &SearchTab::onSourceComboActivated);
     connect(m_multiSourceButton, &QPushButton::clicked, this, &SearchTab::chooseMultipleSources);
     connect(m_deleteSourceButton, &QPushButton::clicked, this, &SearchTab::deleteCurrentSource);
     connect(m_autoscrollCheck, &QCheckBox::toggled, this, &SearchTab::toggleAutoscroll);
@@ -110,6 +127,13 @@ SearchTab::SearchTab(SourceManager &sourceManager, LibraryDatabase *library,
 
     m_autoscrollTimer = new QTimer(this);
     connect(m_autoscrollTimer, &QTimer::timeout, this, &SearchTab::autoscrollTick);
+
+    m_thumbnailReloadTimer = new QTimer(this);
+    m_thumbnailReloadTimer->setSingleShot(true);
+    m_thumbnailReloadTimer->setInterval(GalleryView::kThumbnailReloadDelayMs);
+    connect(m_thumbnailReloadTimer, &QTimer::timeout, this, [this]() {
+        GalleryView::reloadThumbnails(m_galleryView, m_model, m_thumbnailLoader);
+    });
 }
 
 void SearchTab::start()
@@ -152,7 +176,12 @@ void SearchTab::applyThumbnailSize(int value)
         const QSignalBlocker blocker(m_sizeSlider);
         m_sizeSlider->setValue(value);
     }
-    m_thumbnailLoader->setTargetSize(GalleryView::thumbnailSizeForCell(size));
+    const QSize thumbnailSize = GalleryView::thumbnailSizeForCell(size);
+    // Thumbnails already shown were decoded for the old size: too small ones
+    // would stay blurred, too large ones would be scaled on every repaint.
+    if (thumbnailSize != m_thumbnailLoader->targetSize() && m_model->rowCount() > 0)
+        m_thumbnailReloadTimer->start();
+    m_thumbnailLoader->setTargetSize(thumbnailSize);
     GalleryView::setCellSize(m_galleryView, size);
     requestVisibleThumbnails();
 }
@@ -252,8 +281,7 @@ void SearchTab::fetchTagSuggestions()
 
     QNetworkRequest timedReq = req;
     timedReq.setTransferTimeout(5000);
-    SiteAccess::apply(timedReq);
-    m_tagSuggestReply = m_network->get(timedReq);
+    m_tagSuggestReply = SiteAccess::get(m_network, timedReq);
     connect(m_tagSuggestReply, &QNetworkReply::finished, this, &SearchTab::onTagSuggestReplyFinished);
 }
 
@@ -281,14 +309,20 @@ void SearchTab::buildUi()
     auto *rootLayout = new QVBoxLayout(this);
 
     auto *searchBar = new QHBoxLayout();
+    // The object names are for the tests, which find the controls by them.
     m_sourceCombo = new QComboBox(this);
+    m_sourceCombo->setObjectName(QStringLiteral("sourceCombo"));
     m_multiSourceButton = new QPushButton(tr("Wybierz kilka źródeł..."), this);
     m_multiSourceButton->setToolTip(tr("Przeszukaj kilka booru naraz - wyniki lądują we wspólnej galerii"));
+    m_multiSourceButton->setObjectName(QStringLiteral("multiSourceButton"));
     m_deleteSourceButton = new QPushButton(tr("Usuń"), this);
     m_deleteSourceButton->setToolTip(tr("Usuń bieżące źródło z listy"));
+    m_deleteSourceButton->setObjectName(QStringLiteral("deleteSourceButton"));
     m_tagsEdit = new TagLineEdit(this);
+    m_tagsEdit->setObjectName(QStringLiteral("tagsEdit"));
     m_tagsEdit->setPlaceholderText(tr("tag1 tag2 tag3..."));
     m_searchButton = new QPushButton(tr("Szukaj"), this);
+    m_searchButton->setObjectName(QStringLiteral("searchButton"));
     searchBar->addWidget(m_sourceCombo);
     searchBar->addWidget(m_multiSourceButton);
     searchBar->addWidget(m_deleteSourceButton);
@@ -297,6 +331,7 @@ void SearchTab::buildUi()
     rootLayout->addLayout(searchBar);
 
     m_galleryView = new QListView(this);
+    m_galleryView->setObjectName(QStringLiteral("galleryView"));
     m_galleryView->setModel(m_model);
     GalleryView::configure(m_galleryView);
     rootLayout->addWidget(m_galleryView, 1);
@@ -314,8 +349,10 @@ void SearchTab::buildUi()
     m_pageSpin->setRange(1, 100000);
     m_pageSpin->setValue(1);
     m_nextPageButton = new QPushButton(tr("Nast. ▶"), this);
+    m_nextPageButton->setObjectName(QStringLiteral("nextPageButton"));
     m_infiniteScrollCheck = new QCheckBox(tr("Infinite scroll"), this);
     m_loadMoreButton = new QPushButton(tr("Wczytaj więcej"), this);
+    m_loadMoreButton->setObjectName(QStringLiteral("loadMoreButton"));
     m_downloadButton = new QPushButton(tr("Pobierz zaznaczone"), this);
 
     pagingBar->addWidget(sizeLabel);
@@ -335,6 +372,7 @@ void SearchTab::buildUi()
     // Row 2: autoscroll.
     auto *autoscrollBar = new QHBoxLayout();
     m_autoscrollCheck = new QCheckBox(tr("Autoscroll"), this);
+    m_autoscrollCheck->setObjectName(QStringLiteral("autoscrollCheck"));
     auto *speedLabel = new QLabel(tr("Szybkość:"), this);
     m_autoscrollSpeedSlider = new QSlider(Qt::Horizontal, this);
     m_autoscrollSpeedSlider->setRange(1, 30);
@@ -391,29 +429,53 @@ void SearchTab::onSourceComboChanged(int index)
 {
     if (index < 0)
         return;
-
-    const bool isAddCustom = m_sourceCombo->itemData(index, Qt::UserRole).toBool();
-    if (isAddCustom) {
-        AddSourceDialog dialog(this);
-        if (dialog.exec() == QDialog::Accepted && !dialog.detectedFlavor().isEmpty()) {
-            m_sourceManager.addCustomSource(dialog.sourceName(), dialog.detectedFlavor(),
-                                             dialog.baseUrl(), dialog.apiKey(), dialog.userId(),
-                                             dialog.cookie(), dialog.userAgent(), dialog.htmlBridgeUrl(),
-                                             dialog.scriptPath());
-            populateSourceCombo(dialog.sourceName());
-            m_selectedMergeSources = {dialog.sourceName()};
-            updateSourceSelectionUi();
-            startNewSearch();
-        } else {
-            // Cancelled: fall back to the source active before this dialog.
-            populateSourceCombo(m_selectedMergeSources.value(0));
-        }
+    // The "add" entry is no source; onSourceComboActivated() opens its dialog.
+    if (m_sourceCombo->itemData(index, Qt::UserRole).toBool())
         return;
-    }
 
     // Collapses back to single-source, overriding any merged selection.
     m_selectedMergeSources = {m_sourceCombo->currentText()};
+    updateSourceSelectionUi();
     startNewSearch();
+}
+
+void SearchTab::onSourceComboActivated(int index)
+{
+    // activated() rather than currentIndexChanged(): with every source
+    // deleted the "add" entry is the only one, hence already current, and
+    // picking it changes no index.
+    if (index < 0)
+        return;
+    if (m_sourceCombo->itemData(index, Qt::UserRole).toBool()) {
+        showAddSourceDialog();
+        return;
+    }
+    // With no startup sources the combo shows its first source without it
+    // being selected; picking exactly that one changes no index either.
+    const QStringList picked{m_sourceCombo->itemText(index)};
+    if (m_selectedMergeSources != picked) {
+        m_selectedMergeSources = picked;
+        updateSourceSelectionUi();
+        startNewSearch();
+    }
+}
+
+void SearchTab::showAddSourceDialog()
+{
+    AddSourceDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted && !dialog.detectedFlavor().isEmpty()) {
+        m_sourceManager.addCustomSource(dialog.sourceName(), dialog.detectedFlavor(),
+                                         dialog.baseUrl(), dialog.apiKey(), dialog.userId(),
+                                         dialog.cookie(), dialog.userAgent(), dialog.htmlBridgeUrl(),
+                                         dialog.scriptPath());
+        populateSourceCombo(dialog.sourceName());
+        m_selectedMergeSources = {dialog.sourceName()};
+        updateSourceSelectionUi();
+        startNewSearch();
+    } else {
+        // Cancelled: fall back to the source active before this dialog.
+        populateSourceCombo(m_selectedMergeSources.value(0));
+    }
 }
 
 void SearchTab::chooseMultipleSources()
@@ -520,21 +582,41 @@ void SearchTab::deleteCurrentSource()
 
     m_sourceManager.removeSource(name);
     populateSourceCombo();
-    m_selectedMergeSources = m_sourceCombo->count() > 0 ? QStringList{m_sourceCombo->itemText(0)} : QStringList{};
+    // From the source list, not the combo: its last entry is "add a booru".
+    const auto &sources = m_sourceManager.sources();
+    m_selectedMergeSources = sources.isEmpty() ? QStringList{} : QStringList{sources.first()->name()};
     updateSourceSelectionUi();
-    if (!m_selectedMergeSources.isEmpty())
+    if (!m_selectedMergeSources.isEmpty()) {
         startNewSearch();
-    else
-        m_model->clear();
+    } else {
+        clearResults();
+        emit statusMessage(tr("Nie wybrano żadnego źródła."));
+    }
 }
 
 void SearchTab::restoreDefaultSources()
 {
     m_sourceManager.restoreDefaultSources();
-    populateSourceCombo();
-    m_selectedMergeSources = m_sourceCombo->count() > 0 ? QStringList{m_sourceCombo->itemText(0)} : QStringList{};
+    // Restoring only brings hidden built-ins back, so whatever was selected
+    // is still there and stays selected, results included.
+    populateSourceCombo(m_selectedMergeSources.value(0));
+    if (m_selectedMergeSources.isEmpty() && !m_sourceManager.sources().isEmpty())
+        m_selectedMergeSources = {m_sourceManager.sources().first()->name()};
     updateSourceSelectionUi();
     emit statusMessage(tr("Przywrócono domyślną listę źródeł."));
+}
+
+void SearchTab::clearResults()
+{
+    abortPendingSearchReplies();
+    // Worker results of the old round check this and bail out.
+    ++m_searchRound;
+    m_pendingBackgroundJobs = 0;
+    m_loading = false;
+    m_lastRoundFailed = false;
+    m_thumbnailLoader->cancelAll();
+    m_model->clear();
+    updatePagingControlsEnabled();
 }
 
 void SearchTab::startNewSearch()
@@ -562,7 +644,8 @@ void SearchTab::loadNextPage()
 {
     if (m_selectedMergeSources.isEmpty() || m_loading)
         return;
-    issueSearchRequest(m_currentPage + 1, /*append=*/true);
+    // A page that got no answer is asked for again, not skipped.
+    issueSearchRequest(m_lastRoundFailed ? m_currentPage : m_currentPage + 1, /*append=*/true);
 }
 
 void SearchTab::onPrevPage()
@@ -576,7 +659,7 @@ void SearchTab::onNextPage()
 {
     if (m_loading)
         return;
-    issueSearchRequest(m_currentPage + 1, /*append=*/false);
+    issueSearchRequest(m_lastRoundFailed ? m_currentPage : m_currentPage + 1, /*append=*/false);
 }
 
 void SearchTab::onPageSpinEditingFinished()
@@ -600,6 +683,8 @@ void SearchTab::issueSearchRequest(int page, bool append)
         // Row indices are about to be reused; drop in-flight thumbnails.
         m_thumbnailLoader->cancelAll();
         m_model->clear();
+        // The new rows are requested at the current size from the start.
+        m_thumbnailReloadTimer->stop();
     }
 
     m_currentPage = page;
@@ -614,6 +699,9 @@ void SearchTab::issueSearchRequest(int page, bool append)
     m_roundResultCount = 0;
     m_blockedThisRound = 0;
     m_rawRoundCount = 0;
+    m_roundAnswers = 0;
+    m_roundErrors.clear();
+    m_lastRoundFailed = false;
     m_pendingBackgroundJobs = 0;
     ++m_searchRound;
     const QString sourcesLabel = m_selectedMergeSources.size() == 1
@@ -668,14 +756,14 @@ void SearchTab::sendSearchRequest(const QSharedPointer<ISource> &source, QNetwor
 {
     if (!request.url().isValid() || request.url().isEmpty()) {
         NetworkLog::instance().log(QStringLiteral("  -> [%1] no usable request was built").arg(source->name()));
+        noteSourceError(source->name(), tr("nie udało się zbudować zapytania"));
         return;
     }
 
     request.setTransferTimeout(kSearchTimeoutMs);
-    SiteAccess::apply(request);
     NetworkLog::instance().log(QStringLiteral("GET %1").arg(NetworkLog::redactedUrl(request.url())));
 
-    QNetworkReply *reply = m_network->get(request);
+    QNetworkReply *reply = SiteAccess::get(m_network, request);
     m_pendingReplies.insert(reply);
     connect(reply, &QNetworkReply::finished, this, [this, reply, source]() {
         onSearchReplyFinished(reply, source);
@@ -688,17 +776,40 @@ void SearchTab::finishSearchRoundIfDone()
         return;
 
     m_loading = false;
+    // A round in which no source answered says nothing about the results:
+    // the count that decides "end of results" keeps its last real value.
+    m_lastRoundFailed = m_roundAnswers == 0 && !m_roundErrors.isEmpty();
     // Raw, not filtered: a fully blacklisted page still has more pages after it.
-    m_lastPageResultCount = m_rawRoundCount;
+    if (!m_lastRoundFailed)
+        m_lastPageResultCount = m_rawRoundCount;
     updatePagingControlsEnabled();
 
-    const QString sourcesLabel = m_selectedMergeSources.size() == 1
-        ? m_selectedMergeSources.first()
-        : tr("%1 źródeł").arg(m_selectedMergeSources.size());
-    QString status = tr("%1: %2 wyników w widoku (strona %3, +%4)")
-        .arg(sourcesLabel).arg(m_model->rowCount()).arg(m_currentPage).arg(m_roundResultCount);
-    if (m_blockedThisRound > 0)
-        status += QLatin1Char(' ') + tr("- ukryto %1 przez czarną listę").arg(m_blockedThisRound);
+    // The error is the round's last word; a result count written after it
+    // would replace it in the status bar before anyone could read it.
+    QString status;
+    if (m_roundErrors.size() == 1 && m_selectedMergeSources.size() == 1) {
+        status = tr("Błąd (%1): %2").arg(m_roundErrors.first().first, m_roundErrors.first().second);
+    } else {
+        const QString sourcesLabel = m_selectedMergeSources.size() == 1
+            ? m_selectedMergeSources.first()
+            : tr("%1 źródeł").arg(m_selectedMergeSources.size());
+        status = tr("%1: %2 wyników w widoku (strona %3, +%4)")
+            .arg(sourcesLabel).arg(m_model->rowCount()).arg(m_currentPage).arg(m_roundResultCount);
+        if (m_blockedThisRound > 0)
+            status += QLatin1Char(' ') + tr("- ukryto %1 przez czarną listę").arg(m_blockedThisRound);
+        if (!m_roundErrors.isEmpty()) {
+            QStringList failed;
+            for (const auto &error : std::as_const(m_roundErrors))
+                failed.append(error.first);
+            status += QLatin1Char(' ') + tr("- bez odpowiedzi: %1 (szczegóły w logu sieciowym)")
+                                             .arg(failed.join(QStringLiteral(", ")));
+        }
+    }
+    if (m_lastRoundFailed && m_autoscrollCheck->isChecked()) {
+        // Left on, it would ask for the same page again on every tick.
+        m_autoscrollCheck->setChecked(false);
+        status += QLatin1Char(' ') + tr("Autoscroll zatrzymany.");
+    }
     emit statusMessage(status);
 
     requestVisibleThumbnails();
@@ -726,19 +837,23 @@ void SearchTab::onSearchReplyFinished(QNetworkReply *reply, QSharedPointer<ISour
     const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (reply->error() != QNetworkReply::NoError) {
-        const bool timedOut = (reply->error() == QNetworkReply::TimeoutError
-            || reply->error() == QNetworkReply::OperationCanceledError);
+        // A refused redirect also ends as "canceled", but is no timeout.
+        const bool timedOut = SiteAccess::refusedRedirect(reply).isEmpty()
+            && (reply->error() == QNetworkReply::TimeoutError
+                || reply->error() == QNetworkReply::OperationCanceledError);
         // Log stays English regardless of UI language; only the status bar isn't.
+        const QString reason = failureText(reply, httpStatus);
         const QString logReason = timedOut
             ? QStringLiteral("timed out after %1s").arg(kSearchTimeoutMs / 1000)
-            : reply->errorString();
+            : reason;
         NetworkLog::instance().log(QStringLiteral("  -> ERROR [%1] (HTTP %2): %3").arg(source->name()).arg(httpStatus).arg(logReason));
-        if (m_selectedMergeSources.size() == 1) {
-            const QString displayReason = timedOut
-                ? tr("przekroczono limit czasu (%1s) - sprawdź URL/połączenie").arg(kSearchTimeoutMs / 1000)
-                : reply->errorString();
-            emit statusMessage(tr("Błąd (%1): %2").arg(source->name(), displayReason));
-        }
+        // What the site said about it: e621 names the reason in the body.
+        const QString snippet = QString::fromUtf8(reply->readAll().left(300)).simplified();
+        if (!snippet.isEmpty())
+            NetworkLog::instance().log(QStringLiteral("     [%1] response snippet: %2").arg(source->name(), snippet));
+        noteSourceError(source->name(), timedOut
+            ? tr("przekroczono limit czasu (%1s) - sprawdź URL/połączenie").arg(kSearchTimeoutMs / 1000)
+            : reason);
     } else {
         const QByteArray data = reply->readAll();
         if (!source->mayBlock()) {
@@ -767,9 +882,15 @@ void SearchTab::onSearchReplyFinished(QNetworkReply *reply, QSharedPointer<ISour
     finishSearchRoundIfDone();
 }
 
+void SearchTab::noteSourceError(const QString &sourceName, const QString &reason)
+{
+    m_roundErrors.append({sourceName, reason});
+}
+
 void SearchTab::handleSearchPosts(const QSharedPointer<ISource> &source, const QVector<Post> &parsed,
                                    int httpStatus, const QByteArray &data)
 {
+    ++m_roundAnswers;
     m_rawRoundCount += parsed.size();
 
     // Runs even when the site already excluded them: the only guarantee.
@@ -933,16 +1054,15 @@ void SearchTab::showGalleryContextMenu(const QPoint &pos)
     // Copy: menu.exec() spins an event loop that may reset the model.
     const Post post = m_model->postAt(clicked.row());
 
-    const QString imageUrl = fullImageUrl(post);
-    if (!imageUrl.isEmpty() && !isVideoUrl(imageUrl)) {
+    const QString imageUrl = clipboardImageUrl(post);
+    if (!imageUrl.isEmpty()) {
         QAction *copyImageAction = menu.addAction(tr("Kopiuj obraz do schowka"));
         connect(copyImageAction, &QAction::triggered, this, [this, imageUrl]() {
             emit statusMessage(tr("Kopiowanie obrazu do schowka..."));
             QNetworkRequest req{QUrl(imageUrl)};
             req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
             req.setTransferTimeout(30000);
-            SiteAccess::apply(req);
-            QNetworkReply *reply = m_network->get(req);
+            QNetworkReply *reply = SiteAccess::get(m_network, req);
             connect(reply, &QNetworkReply::finished, this, [this, reply]() {
                 reply->deleteLater();
                 if (reply->error() != QNetworkReply::NoError) {

@@ -5,9 +5,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-// Pure-logic regression tests: no network, no real user data. Everything
-// that touches settings or the database runs under QStandardPaths test mode,
-// so running this never disturbs an installed copy.
+// Regression tests: no network beyond this machine, no real user data.
+// Whatever needs a server talks to one started inside the test, on the
+// loopback interface. Everything that touches settings or the database runs
+// under QStandardPaths test mode, so running this never disturbs an
+// installed copy.
 #include "Blacklist.h"
 #include "HtmlEntities.h"
 #include "Paging.h"
@@ -33,8 +35,24 @@
 #include "AnimatedThumbnails.h"
 #include "GalleryModel.h"
 #include "GalleryView.h"
+#include "SearchTab.h"
+#include "LibraryTab.h"
+#include "FolderAccessGuard.h"
 
 #include <QApplication>
+#include <QBuffer>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDialog>
+#include <QImage>
+#include <QItemSelectionModel>
+#include <QLabel>
+#include <QListWidget>
+#include <QMessageBox>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QPushButton>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QFuture>
@@ -1299,6 +1317,8 @@ public:
         QByteArray type = "text/html";
         QByteArray body;
         QByteArray location;
+        // Sent this long after the request arrived.
+        int delayMs = 0;
     };
     using Handler = std::function<Answer(const QString &path, const QUrlQuery &query)>;
 
@@ -1317,6 +1337,29 @@ public:
     QString base() const { return QStringLiteral("http://127.0.0.1:%1").arg(serverPort()); }
 
     QStringList requested;
+    // Every request as it arrived, headers included.
+    QList<QByteArray> rawRequests;
+    // Requests being answered at one moment, and the most there ever were.
+    int openRequests = 0;
+    int mostOpenRequests = 0;
+
+    // The Cookie header of each request for `path`, "-" where there was none.
+    QStringList cookiesSentTo(const QString &path) const
+    {
+        QStringList cookies;
+        for (const QByteArray &raw : rawRequests) {
+            const QByteArray target = raw.left(raw.indexOf("\r\n")).split(' ').value(1);
+            if (QUrl(base() + QString::fromUtf8(target)).path() != path)
+                continue;
+            QString cookie = QStringLiteral("-");
+            for (const QByteArray &line : raw.split('\n')) {
+                if (line.toLower().startsWith("cookie:"))
+                    cookie = QString::fromUtf8(line.mid(7).trimmed());
+            }
+            cookies.append(cookie);
+        }
+        return cookies;
+    }
 
 private:
     void onReadyRead(QTcpSocket *socket)
@@ -1327,6 +1370,7 @@ private:
             return;
         socket->setProperty("buffered", QByteArray());
 
+        rawRequests.append(buffered);
         const QByteArray target = buffered.left(buffered.indexOf("\r\n")).split(' ').value(1);
         const QUrl url(base() + QString::fromUtf8(target));
         requested.append(url.path() + (url.hasQuery() ? QLatin1Char('?') + url.query() : QString()));
@@ -1337,9 +1381,19 @@ private:
         if (!answer.location.isEmpty())
             response += "Location: " + answer.location + "\r\n";
         response += "Connection: close\r\n\r\n" + answer.body;
-        socket->write(response);
-        socket->flush();
-        socket->disconnectFromHost();
+
+        ++openRequests;
+        mostOpenRequests = qMax(mostOpenRequests, openRequests);
+        const auto send = [this, socket, response]() {
+            --openRequests;
+            socket->write(response);
+            socket->flush();
+            socket->disconnectFromHost();
+        };
+        if (answer.delayMs > 0)
+            QTimer::singleShot(answer.delayMs, socket, send);
+        else
+            send();
     }
 
     Handler m_handler;
@@ -1781,6 +1835,908 @@ void testSiteAccess()
     equal("cleared", sent(QStringLiteral("https://protected.example/")), QStringLiteral("|blairqt"));
 }
 
+
+// Runs the event loop until done() says so or the time is up.
+bool waitFor(int milliseconds, const std::function<bool()> &done)
+{
+    QElapsedTimer waited;
+    waited.start();
+    while (!done() && waited.elapsed() < milliseconds)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    return done();
+}
+
+// Runs the event loop for a fixed time.
+void spinFor(int milliseconds)
+{
+    waitFor(milliseconds, []() { return false; });
+}
+
+// A query item's value as a web server reads it off the wire: "+" is a
+// space, then the percent escapes are resolved.
+QString asServerReads(const QUrl &url, const QByteArray &key)
+{
+    const QByteArray wire = url.toEncoded();
+    const QList<QByteArray> pairs = wire.mid(wire.indexOf('?') + 1).split('&');
+    for (const QByteArray &pair : pairs) {
+        const int equals = pair.indexOf('=');
+        if (equals < 0 || QByteArray::fromPercentEncoding(pair.left(equals)) != key)
+            continue;
+        QByteArray value = pair.mid(equals + 1);
+        value.replace('+', ' ');
+        return QString::fromUtf8(QByteArray::fromPercentEncoding(value));
+    }
+    return QStringLiteral("<no such item>");
+}
+
+void testQueryEncoding()
+{
+    begin("Search terms reach the server as they were typed");
+
+    // "6+girls" used to arrive as "6 girls" and find nothing; a literal
+    // "%2B" used to arrive as "+".
+    const QString tags = QStringLiteral("6+girls c++ 100%_done a&b rating:safe -tag_(x) lit%2Beral a=b #1");
+    const QString site = QStringLiteral("https://site.example");
+
+    const QList<QPair<QString, QByteArray>> flavors = {
+        {QStringLiteral("gelbooru"), "tags"},   {QStringLiteral("danbooru"), "tags"},
+        {QStringLiteral("moebooru"), "tags"},   {QStringLiteral("e621"), "tags"},
+        {QStringLiteral("szurubooru"), "query"}, {QStringLiteral("shimmie"), "tags"},
+        {QStringLiteral("gelbooru-html"), "tags"},
+    };
+    for (const auto &[flavor, key] : flavors) {
+        const auto source = SourceManager::createSource(QStringLiteral("S"), flavor, site);
+        const QUrl url = source->buildSearchRequest(tags, 1, 5).url();
+        equal(qPrintable(flavor + QStringLiteral(": search")), asServerReads(url, key), tags);
+    }
+
+    // Philomena separates terms with ", " and writes "_" as a space.
+    PhilomenaSource philomena(QStringLiteral("P"), site);
+    equal("philomena: search", asServerReads(philomena.buildSearchRequest(tags, 1, 5).url(), "q"),
+          QStringLiteral("6+girls, c++, 100% done, a&b, rating:safe, -tag (x), lit%2Beral, a=b, #1"));
+
+    GelbooruSource bridged(QStringLiteral("B"), QStringLiteral("https://site.example/a+b"), {}, {}, {}, {},
+                           QStringLiteral("http://127.0.0.1:8765"));
+    const QUrl bridgeUrl = bridged.buildSearchRequest(tags, 1, 5).url();
+    equal("scrape bridge: search", asServerReads(bridgeUrl, "tags"), tags);
+    equal("scrape bridge: site address", asServerReads(bridgeUrl, "base_url"), QStringLiteral("https://site.example/a+b"));
+
+    GelbooruSource keyed(QStringLiteral("K"), site, QStringLiteral("k+e/y%3D"), QStringLiteral("u+1"));
+    const QUrl keyedUrl = keyed.buildSearchRequest(QStringLiteral("x"), 1, 5).url();
+    equal("API key", asServerReads(keyedUrl, "api_key"), QStringLiteral("k+e/y%3D"));
+    equal("user id", asServerReads(keyedUrl, "user_id"), QStringLiteral("u+1"));
+
+    const QString prefix = QStringLiteral("c++");
+    const QList<QPair<QString, QByteArray>> suggesting = {
+        {QStringLiteral("gelbooru"), "q"},  {QStringLiteral("danbooru"), "search[query]"},
+        {QStringLiteral("moebooru"), "name"}, {QStringLiteral("e621"), "search[name_matches]"},
+        {QStringLiteral("shimmie"), "s"},
+    };
+    for (const auto &[flavor, key] : suggesting) {
+        const auto source = SourceManager::createSource(QStringLiteral("S"), flavor, site);
+        equal(qPrintable(flavor + QStringLiteral(": tag suggestions")),
+              asServerReads(source->buildTagSuggestRequest(prefix).url(), key), prefix);
+    }
+    equal("philomena: tag suggestions", asServerReads(philomena.buildTagSuggestRequest(prefix).url(), "q"),
+          QStringLiteral("c++*"));
+
+    // The readable characters of tag syntax stay readable in the log.
+    const QString plain = QString::fromLatin1(
+        SourceManager::createSource(QStringLiteral("S"), QStringLiteral("moebooru"), site)
+            ->buildSearchRequest(QStringLiteral("rating:safe tag_(x)"), 1, 5).url().toEncoded());
+    check("colon and parentheses are not escaped", plain.contains(QStringLiteral("tags=rating:safe%20tag_(x)")), plain);
+}
+
+void testTagExclusionLimits()
+{
+    begin("The blacklist never makes a search the site rejects");
+
+    QStringList sixty;
+    for (int i = 0; i < 60; ++i)
+        sixty << QStringLiteral("bad_%1").arg(i);
+
+    // e621 answers HTTP 422 to the 41st term.
+    E621Source e621(QStringLiteral("e621"), QStringLiteral("https://e621.net"));
+    check("e621 has a term limit", e621.maxSearchTerms() == 40);
+    const QStringList composed = searchTagsWithExclusions(e621, QStringLiteral("1girl solo"), sixty)
+                                     .split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    check("terms stop at the site's limit", composed.size() == 40, QString::number(composed.size()));
+    equal("the user's own terms come first", composed.mid(0, 3).join(QLatin1Char(' ')),
+          QStringLiteral("1girl solo -bad_0"));
+    equal("exclusions fill the rest in order", composed.last(), QStringLiteral("-bad_37"));
+
+    QStringList own;
+    for (int i = 0; i < 45; ++i)
+        own << QStringLiteral("t%1").arg(i);
+    equal("a query already past the limit gets nothing added",
+          searchTagsWithExclusions(e621, own.join(QLatin1Char(' ')), sixty), own.join(QLatin1Char(' ')));
+
+    // No term limit, but an address cannot grow without end either.
+    MoebooruSource moebooru(QStringLiteral("yande.re"), QStringLiteral("https://yande.re"));
+    check("moebooru has no term limit", moebooru.maxSearchTerms() == 0);
+    equal("sixty exclusions fit", QString::number(
+              searchTagsWithExclusions(moebooru, QStringLiteral("1girl"), sixty).count(QStringLiteral(" -"))),
+          QStringLiteral("60"));
+    QStringList thousand;
+    for (int i = 0; i < 1000; ++i)
+        thousand << QStringLiteral("blocked_tag_number_%1").arg(i);
+    const QString longest = searchTagsWithExclusions(moebooru, QStringLiteral("1girl"), thousand);
+    check("a huge blacklist is cut to a bounded length", longest.size() <= kMaxSearchTagsLength
+              && longest.size() > kMaxSearchTagsLength - 40, QString::number(longest.size()));
+    const QString lastTerm = longest.section(QLatin1Char(' '), -1);
+    check("the cut falls between terms, not inside one",
+          lastTerm.startsWith(QLatin1Char('-')) && thousand.contains(lastTerm.mid(1)), lastTerm);
+}
+
+void testClipboardImage()
+{
+    begin("\"Copy image\" is offered only where there is an image");
+    Post image;
+    image.fileUrl = QStringLiteral("https://x.org/full.png");
+    equal("an image post", clipboardImageUrl(image), image.fileUrl);
+
+    Post video;
+    video.fileUrl = QStringLiteral("https://x.org/clip.webm");
+    video.previewUrl = QStringLiteral("https://x.org/thumb.jpg");
+    check("a video post", clipboardImageUrl(video).isEmpty());
+
+    // Shimmie2 CDNs serve "/ab/cd/<md5>": the address says nothing.
+    Post shimmieVideo;
+    shimmieVideo.fileUrl = QStringLiteral("https://cdn.x.org/ab/cd/abcdef");
+    shimmieVideo.fileExtension = QStringLiteral("mp4");
+    check("a video whose address has no extension", clipboardImageUrl(shimmieVideo).isEmpty());
+    Post shimmieImage = shimmieVideo;
+    shimmieImage.fileExtension = QStringLiteral("png");
+    equal("an image whose address has no extension", clipboardImageUrl(shimmieImage), shimmieImage.fileUrl);
+
+    Post localVideo;
+    localVideo.localFilePath = QStringLiteral("/home/u/clip.mp4");
+    localVideo.fileUrl = QStringLiteral("https://x.org/clip.mp4");
+    check("a downloaded video", clipboardImageUrl(localVideo).isEmpty());
+    Post localImage;
+    localImage.localFilePath = QStringLiteral("/home/u/pic.png");
+    equal("a downloaded image", clipboardImageUrl(localImage), QStringLiteral("file:///home/u/pic.png"));
+}
+
+void testCookieStaysOnItsSite()
+{
+    begin("A site's cookie does not follow a redirect to another site");
+
+    // The server is known as 127.0.0.1 and as localhost: two hosts to Qt.
+    RouteServer *self = nullptr;
+    RouteServer server([&self](const QString &path, const QUrlQuery &) {
+        RouteServer::Answer answer;
+        if (path == QStringLiteral("/away")) {
+            answer.status = 302;
+            answer.location = QStringLiteral("http://localhost:%1/landed").arg(self->serverPort()).toLatin1();
+        } else if (path == QStringLiteral("/within")) {
+            answer.status = 302;
+            answer.location = QStringLiteral("http://127.0.0.1:%1/landed").arg(self->serverPort()).toLatin1();
+        } else if (path == QStringLiteral("/landed")) {
+            answer = data("arrived", "text/plain");
+        }
+        return answer;
+    });
+    self = &server;
+
+    QNetworkAccessManager network;
+    struct Outcome {
+        bool ok = false;
+        QByteArray body;
+        QString refused;
+    };
+    const auto fetch = [&network, &server](const QString &path, const QByteArray &ownCookie = {}) {
+        QNetworkRequest request{QUrl(server.base() + path)};
+        request.setTransferTimeout(5000);
+        if (!ownCookie.isEmpty())
+            request.setRawHeader("Cookie", ownCookie);
+        QNetworkReply *reply = SiteAccess::get(&network, request);
+        waitFor(8000, [reply]() { return reply->isFinished(); });
+        Outcome outcome;
+        outcome.ok = reply->isFinished() && reply->error() == QNetworkReply::NoError;
+        outcome.body = reply->readAll();
+        outcome.refused = SiteAccess::refusedRedirect(reply);
+        reply->deleteLater();
+        return outcome;
+    };
+
+    QHash<QString, SiteAccess::Credentials> byHost;
+    byHost.insert(QStringLiteral("127.0.0.1"), {QStringLiteral("session=secret"), QString()});
+    SiteAccess::setAll(byHost);
+
+    const Outcome away = fetch(QStringLiteral("/away"));
+    equal("the site itself gets the cookie", server.cookiesSentTo(QStringLiteral("/away")).join(QLatin1Char('|')),
+          QStringLiteral("session=secret"));
+    check("a redirect to another host is not followed", !away.ok && server.cookiesSentTo(QStringLiteral("/landed")).isEmpty(),
+          server.cookiesSentTo(QStringLiteral("/landed")).join(QLatin1Char('|')));
+    check("and is reported as such", QUrl(away.refused).host() == QStringLiteral("localhost"), away.refused);
+
+    const Outcome within = fetch(QStringLiteral("/within"));
+    check("a redirect within the site is followed", within.ok && within.body == "arrived");
+    equal("with the cookie", server.cookiesSentTo(QStringLiteral("/landed")).join(QLatin1Char('|')),
+          QStringLiteral("session=secret"));
+    check("and nothing is reported", within.refused.isEmpty());
+
+    // A cookie the request brought along itself (a source's own, a plugin's).
+    SiteAccess::setAll({});
+    server.rawRequests.clear();
+    const Outcome own = fetch(QStringLiteral("/away"), "own=1");
+    check("a cookie set by the source stays as well",
+          !own.ok && server.cookiesSentTo(QStringLiteral("/landed")).isEmpty() && !own.refused.isEmpty());
+
+    // Without a cookie there is nothing to protect: redirects work as ever.
+    server.rawRequests.clear();
+    const Outcome plain = fetch(QStringLiteral("/away"));
+    check("a request without a cookie follows any redirect", plain.ok && plain.body == "arrived");
+    equal("and still carries none", server.cookiesSentTo(QStringLiteral("/landed")).join(QLatin1Char('|')),
+          QStringLiteral("-"));
+}
+
+void testDownloadQueue()
+{
+    begin("A large batch of downloads waits its turn instead of timing out");
+
+    QTemporaryDir dir;
+    // Every file takes 600 ms to answer; a download is given up after 2 s
+    // without data. Thirty of them at six per host take five rounds, 3 s:
+    // sent all at once, the last two rounds would time out while they wait
+    // inside Qt, without ever reaching the server.
+    RouteServer server([](const QString &, const QUrlQuery &) {
+        RouteServer::Answer answer = data(TestHttpServer::okBody(), "image/png");
+        answer.delayMs = 600;
+        return answer;
+    });
+    if (!dir.isValid() || !server.isListening()) {
+        check("temporary directory and test server", false);
+        return;
+    }
+
+    DownloadManager manager(nullptr);
+    manager.setDownloadDir(dir.path());
+    manager.setTransferTimeout(2000);
+
+    int saved = 0;
+    QStringList errors;
+    QObject::connect(&manager, &DownloadManager::downloadFinished,
+        [&saved, &errors](const QString &, bool ok, bool, const QString &error) {
+            if (ok)
+                ++saved;
+            else
+                errors.append(error);
+        });
+
+    constexpr int total = 30;
+    for (int i = 0; i < total; ++i) {
+        Post post;
+        post.id = QString::number(i);
+        post.sourceName = QStringLiteral("Batch");
+        post.fileUrl = server.base() + QStringLiteral("/f/%1.png").arg(i);
+        manager.download(post);
+    }
+    check("only a few start at once", manager.runningCount() == DownloadManager::kMaxParallel,
+          QString::number(manager.runningCount()));
+    check("the rest wait", manager.queuedCount() == total - DownloadManager::kMaxParallel,
+          QString::number(manager.queuedCount()));
+
+    // The same post again while it waits is not queued twice.
+    Post again;
+    again.id = QString::number(total - 1);
+    again.sourceName = QStringLiteral("Batch");
+    again.fileUrl = server.base() + QStringLiteral("/f/%1.png").arg(total - 1);
+    manager.download(again);
+    check("a waiting download is not queued twice", manager.queuedCount() == total - DownloadManager::kMaxParallel);
+
+    waitFor(20000, [&]() { return saved + errors.size() >= total; });
+    check("every file was saved", saved == total,
+          QStringLiteral("%1 saved, %2 failed: %3").arg(saved).arg(errors.size()).arg(errors.value(0)));
+    check("the server never had more than the limit open", server.mostOpenRequests <= DownloadManager::kMaxParallel,
+          QString::number(server.mostOpenRequests));
+    check("every file is on disk",
+          QDir(dir.path()).entryList({QStringLiteral("Batch_*.png")}, QDir::Files).size() == total);
+    check("nothing is left running or waiting", manager.runningCount() == 0 && manager.queuedCount() == 0);
+
+    // The download folder disappears while the program runs (deleted in a
+    // file manager): it used to be refused as "outside the allowed folders".
+    const QString vanishing = dir.filePath(QStringLiteral("vanishing"));
+    QDir().mkpath(vanishing);
+    manager.setDownloadDir(vanishing);
+    QDir(vanishing).removeRecursively();
+    saved = 0;
+    errors.clear();
+    Post post;
+    post.id = QStringLiteral("late");
+    post.sourceName = QStringLiteral("Batch");
+    post.fileUrl = server.base() + QStringLiteral("/f/late.png");
+    manager.download(post);
+    waitFor(10000, [&]() { return saved + errors.size() >= 1; });
+    check("a vanished download folder is created again", saved == 1 && QFile::exists(vanishing + QStringLiteral("/Batch_late.png")),
+          errors.value(0));
+}
+
+QByteArray pngOfSize(int width, int height, const QColor &color = Qt::darkCyan)
+{
+    QImage image(width, height, QImage::Format_RGB32);
+    image.fill(color);
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+    return bytes;
+}
+
+bool writeFile(const QString &path, const QByteArray &bytes)
+{
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size();
+}
+
+QString sizeText(const QSize &size)
+{
+    return QStringLiteral("%1x%2").arg(size.width()).arg(size.height());
+}
+
+#ifdef Q_OS_LINUX
+// The most memory this process has held so far, in megabytes.
+int peakMemoryMb()
+{
+    QFile status(QStringLiteral("/proc/self/status"));
+    if (!status.open(QIODevice::ReadOnly))
+        return -1;
+    const QList<QByteArray> lines = status.readAll().split('\n');
+    for (const QByteArray &line : lines) {
+        if (line.startsWith("VmHWM:"))
+            return line.mid(6).simplified().split(' ').value(0).toInt() / 1024;
+    }
+    return -1;
+}
+#endif
+
+void testThumbnailDecoding()
+{
+    begin("Thumbnails are decoded at the size they are shown at");
+
+    const auto decoded = [](const QByteArray &bytes, const QSize &target) {
+        QBuffer buffer;
+        buffer.setData(bytes);
+        buffer.open(QIODevice::ReadOnly);
+        return ThumbnailLoader::decodeScaled(&buffer, target);
+    };
+    equal("a wide image fits the width", sizeText(decoded(pngOfSize(400, 200), QSize(100, 100)).size()),
+          QStringLiteral("100x50"));
+    equal("a tall image fits the height", sizeText(decoded(pngOfSize(200, 400), QSize(100, 100)).size()),
+          QStringLiteral("50x100"));
+    equal("a small image fills the cell, as before", sizeText(decoded(pngOfSize(20, 10), QSize(100, 100)).size()),
+          QStringLiteral("100x50"));
+    check("what is no image gives nothing", decoded("neither png nor jpeg", QSize(100, 100)).isNull());
+    const QImage red = decoded(pngOfSize(300, 300, Qt::red), QSize(64, 64));
+    check("the picture survives the scaling", !red.isNull() && (red.pixel(32, 32) & 0x00ffffff) == 0x00ff0000);
+
+    QTemporaryDir dir;
+    const QString picture = dir.filePath(QStringLiteral("picture.png"));
+    check("test image written", dir.isValid() && writeFile(picture, pngOfSize(400, 200)));
+
+    // What the library tab does: a downloaded file is its own thumbnail.
+    ThumbnailLoader loader(nullptr, /*useDiskCache=*/false);
+    loader.setTargetSize(QSize(100, 100));
+    QHash<int, QSize> delivered;
+    QObject::connect(&loader, &ThumbnailLoader::thumbnailReady,
+                     [&delivered](int row, const QPixmap &pixmap) { delivered.insert(row, pixmap.size()); });
+    loader.request(0, QUrl::fromLocalFile(picture));
+    waitFor(5000, [&delivered]() { return delivered.contains(0); });
+    equal("a local file is read from disk at thumbnail size", sizeText(delivered.value(0)), QStringLiteral("100x50"));
+
+    loader.request(1, QUrl::fromLocalFile(dir.filePath(QStringLiteral("missing.png"))));
+    spinFor(300);
+    check("a missing file gives nothing", !delivered.contains(1));
+
+#ifdef Q_OS_LINUX
+    // A downloaded file that is no image used to be read whole into memory,
+    // only for the decoder to reject it: 300 MB per cell for a video. The
+    // file here is 192 MB of nothing (sparse, so it takes no disk space).
+    // Its name is not a video's on purpose: a video would be handed to the
+    // system's media player, whose start-up alone allocates more than that
+    // on some machines, and this test is about the reading.
+    const QString big = dir.filePath(QStringLiteral("archive.zip"));
+    {
+        QFile file(big);
+        check("sparse test file created", file.open(QIODevice::WriteOnly) && file.resize(192LL * 1024 * 1024));
+    }
+    const int before = peakMemoryMb();
+    for (int row = 2; row < 6; ++row)
+        loader.request(row, QUrl::fromLocalFile(big));
+    spinFor(1000);
+    const int after = peakMemoryMb();
+    check("a local file that is no image is not read into memory", before > 0 && after - before < 96,
+          QStringLiteral("peak grew by %1 MB").arg(after - before));
+    check("and gets no thumbnail", !delivered.contains(2) && !delivered.contains(5));
+#endif
+}
+
+void testThumbnailReload()
+{
+    begin("Thumbnails are fetched again when their size changes");
+
+    QTemporaryDir dir;
+    QVector<Post> posts;
+    for (int row = 0; row < 3; ++row) {
+        const QString path = dir.filePath(QStringLiteral("p%1.png").arg(row));
+        writeFile(path, pngOfSize(600, 600));
+        Post post;
+        post.id = QString::number(row);
+        post.localFilePath = path;
+        post.previewUrl = QUrl::fromLocalFile(path).toString();
+        posts.append(post);
+    }
+
+    GalleryModel model;
+    model.appendPosts(posts);
+    QListView view;
+    GalleryView::configure(&view);
+    view.setModel(&model);
+    const QSize smallCell(108, 108);
+    const QSize largeCell(208, 208);
+    GalleryView::setCellSize(&view, smallCell);
+    view.resize(700, 500);
+    view.show();
+
+    ThumbnailLoader loader(nullptr, /*useDiskCache=*/false);
+    loader.setTargetSize(GalleryView::thumbnailSizeForCell(smallCell));
+    QObject::connect(&loader, &ThumbnailLoader::thumbnailReady,
+                     [&model](int row, const QPixmap &pixmap) { model.setThumbnail(row, pixmap); });
+    const auto widths = [&model]() {
+        QStringList list;
+        for (int row = 0; row < model.rowCount(); ++row)
+            list << QString::number(model.thumbnailAt(row).width());
+        return list.join(QLatin1Char(','));
+    };
+
+    GalleryView::requestVisibleRows(&view, &model, &loader);
+    waitFor(5000, [&]() { return widths() == QStringLiteral("100,100,100"); });
+    equal("thumbnails arrive at the size of the cell", widths(), QStringLiteral("100,100,100"));
+
+    // The slider moved. Asking for the visible rows alone changes nothing:
+    // they count as fetched, which is why they used to stay small and blurred.
+    loader.setTargetSize(GalleryView::thumbnailSizeForCell(largeCell));
+    GalleryView::setCellSize(&view, largeCell);
+    GalleryView::requestVisibleRows(&view, &model, &loader);
+    spinFor(400);
+    equal("rows already fetched are not fetched twice by scrolling", widths(), QStringLiteral("100,100,100"));
+    check("the old thumbnails are painted stretched meanwhile", !view.grab().isNull());
+
+    GalleryView::reloadThumbnails(&view, &model, &loader);
+    equal("the old thumbnails stay until the new ones arrive", widths(), QStringLiteral("100,100,100"));
+    waitFor(5000, [&]() { return widths() == QStringLiteral("200,200,200"); });
+    equal("a reload brings them at the new size", widths(), QStringLiteral("200,200,200"));
+    check("and they are painted as they are", !view.grab().isNull());
+}
+
+void testLibrarySeveralTags()
+{
+    begin("Library search with several tags");
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    QFile::remove(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                  + QStringLiteral("/library.sqlite3"));
+    LibraryDatabase db;
+    if (!db.isOpen()) {
+        check("database opens", false);
+        return;
+    }
+
+    // Thirty posts, all "common"; three of them "rare"; two "Mixed_Case".
+    const QString root = QDir::tempPath() + QStringLiteral("/blairqt-test-tags");
+    for (int i = 1; i <= 30; ++i) {
+        Post p;
+        p.id = QString::number(i);
+        p.sourceName = QStringLiteral("Src");
+        p.tags = QStringList{QStringLiteral("common")};
+        if (i == 5 || i == 15 || i == 25)
+            p.tags << QStringLiteral("rare");
+        if (i == 10 || i == 15)
+            p.tags << QStringLiteral("Mixed_Case");
+        const QString folder = (i % 2 == 0) ? QStringLiteral("/even/") : QStringLiteral("/");
+        db.addOrUpdatePost(p, root + folder + QStringLiteral("%1.jpg").arg(i));
+    }
+    const auto ids = [](const QVector<Post> &posts) {
+        QStringList list;
+        for (const Post &post : posts)
+            list << post.id;
+        return list.join(QLatin1Char(','));
+    };
+
+    equal("both tags, newest first", ids(db.search(QStringLiteral("common rare"), -1, 0)), QStringLiteral("25,15,5"));
+    equal("the order of the terms does not matter", ids(db.search(QStringLiteral("rare common"), -1, 0)),
+          QStringLiteral("25,15,5"));
+    equal("case does not matter", ids(db.search(QStringLiteral("RARE Common mixed_case"), -1, 0)),
+          QStringLiteral("15"));
+    equal("a term twice is one term", ids(db.search(QStringLiteral("rare rare Rare"), -1, 0)), QStringLiteral("25,15,5"));
+    check("a tag nobody has finds nothing, wherever it stands",
+          db.search(QStringLiteral("common missing"), -1, 0).isEmpty()
+              && db.search(QStringLiteral("missing common"), -1, 0).isEmpty());
+    check("a prefix of a tag is not the tag", db.search(QStringLiteral("comm rare"), -1, 0).isEmpty());
+
+    // Paging by cursor, with tags.
+    const QVector<Post> first = db.search(QStringLiteral("common rare"), 2, 0);
+    equal("first page", ids(first), QStringLiteral("25,15"));
+    equal("second page continues below the cursor",
+          ids(db.search(QStringLiteral("common rare"), 2, first.last().libraryId)), QStringLiteral("5"));
+
+    QStringList seen;
+    qint64 cursor = 0;
+    for (int page = 0; page < 5; ++page) {
+        const QVector<Post> posts = db.search(QStringLiteral("common"), 10, cursor);
+        if (posts.isEmpty())
+            break;
+        for (const Post &post : posts)
+            seen << post.id;
+        cursor = posts.last().libraryId;
+    }
+    check("three pages of ten cover all thirty once", seen.size() == 30 && QSet<QString>(seen.begin(), seen.end()).size() == 30,
+          QString::number(seen.size()));
+    equal("in descending order", seen.mid(0, 3).join(QLatin1Char(',')), QStringLiteral("30,29,28"));
+
+    // Tags together with the folder filter.
+    equal("tags inside one folder", ids(db.search(QStringLiteral("common rare"), -1, 0, root, false)),
+          QStringLiteral("25,15,5"));
+    equal("tags inside a subfolder", ids(db.search(QStringLiteral("common Mixed_Case"), -1, 0, root + QStringLiteral("/even"), false)),
+          QStringLiteral("10"));
+    check("tags in a folder that has none of them",
+          db.search(QStringLiteral("rare"), -1, 0, root + QStringLiteral("/even"), false).isEmpty());
+    equal("tags with subfolders included", ids(db.search(QStringLiteral("Mixed_Case"), -1, 0, root, true)),
+          QStringLiteral("15,10"));
+
+    // A post whose tags changed is found by the new ones only.
+    Post changed;
+    changed.id = QStringLiteral("25");
+    changed.sourceName = QStringLiteral("Src");
+    changed.tags = QStringList{QStringLiteral("common"), QStringLiteral("other")};
+    db.addOrUpdatePost(changed, root + QStringLiteral("/25.jpg"));
+    equal("after retagging", ids(db.search(QStringLiteral("rare common"), -1, 0)), QStringLiteral("15,5"));
+}
+
+// Presses a button of the message box that is about to open.
+void answerNextMessageBox(QMessageBox::StandardButton button)
+{
+    QTimer::singleShot(0, [button]() {
+        if (auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget()))
+            box->button(button)->click();
+    });
+}
+
+// A booru for the search tab, speaking the gelbooru dapi: five posts per
+// page for ever, except where told to fail.
+class FakeBooru {
+public:
+    FakeBooru()
+        : server([this](const QString &path, const QUrlQuery &query) { return answer(path, query); })
+    {
+    }
+
+    RouteServer server;
+    // The pages asked for, in order (dapi counts them from 0).
+    QList<int> pagesAsked;
+    // Pages answered with HTTP 500: once, or every time.
+    QSet<int> failOnce;
+    QSet<int> failAlways;
+
+private:
+    RouteServer::Answer answer(const QString &path, const QUrlQuery &query)
+    {
+        if (path != QStringLiteral("/index.php"))
+            return html("no such file", 404);
+        // A request with an API key is turned away: the address then carries
+        // a secret that must not show up in an error message.
+        if (query.hasQueryItem(QStringLiteral("api_key")))
+            return html("forbidden", 403);
+
+        const int page = query.queryItemValue(QStringLiteral("pid")).toInt();
+        pagesAsked.append(page);
+        if (failAlways.contains(page) || failOnce.remove(page))
+            return html("{\"message\":\"database is busy\"}", 500);
+
+        QByteArray json = "[";
+        for (int i = 0; i < 5; ++i) {
+            const QByteArray id = QByteArray::number(page * 100 + i);
+            json += (i ? "," : "") + QByteArray("{\"id\":") + id + ",\"tags\":\"tag_a tag_b\",\"file_url\":\""
+                + server.base().toLatin1() + "/img/" + id + ".png\",\"preview_url\":\""
+                + server.base().toLatin1() + "/img/" + id + ".png\"}";
+        }
+        return data(json + "]");
+    }
+};
+
+void testSearchTab()
+{
+    begin("Search tab: errors, pages and sources");
+
+    FakeBooru booru;
+    if (!booru.server.isListening()) {
+        check("test server", false);
+        return;
+    }
+
+    // Only sources that live on this machine: nothing here may reach a real site.
+    SourceManager manager;
+    QStringList builtIn;
+    for (const auto &source : manager.sources())
+        builtIn << source->name();
+    for (const QString &name : std::as_const(builtIn))
+        manager.removeSource(name);
+    manager.addCustomSource(QStringLiteral("Local"), QStringLiteral("gelbooru"), booru.server.base());
+    // Port 1 on this machine: the connection is refused at once.
+    manager.addCustomSource(QStringLiteral("Dead"), QStringLiteral("gelbooru"), QStringLiteral("http://127.0.0.1:1"));
+    manager.addCustomSource(QStringLiteral("Keyed"), QStringLiteral("gelbooru"), booru.server.base(),
+                            QStringLiteral("SECRETKEY"), QStringLiteral("42"));
+
+    QSettings settings;
+    settings.setValue(QStringLiteral("welcomeCompleted"), true);
+    settings.setValue(QStringLiteral("startupSources"), QStringList{QStringLiteral("Local")});
+    settings.setValue(QStringLiteral("resultsPerPage"), 5);
+    Blacklist::setGlobalTags({});
+
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    {
+        LibraryDatabase library;
+        DownloadManager downloads(&library);
+        SearchTab tab(manager, &library, &downloads);
+
+        QStringList statuses;
+        QObject::connect(&tab, &SearchTab::statusMessage, [&statuses](const QString &text) { statuses << text; });
+        QStringList logged;
+        const QMetaObject::Connection logging = QObject::connect(&NetworkLog::instance(), &NetworkLog::entryAdded,
+            [&logged](const QString &line) { logged << line; });
+
+        auto *combo = tab.findChild<QComboBox *>(QStringLiteral("sourceCombo"));
+        auto *searchButton = tab.findChild<QPushButton *>(QStringLiteral("searchButton"));
+        auto *loadMore = tab.findChild<QPushButton *>(QStringLiteral("loadMoreButton"));
+        auto *nextPage = tab.findChild<QPushButton *>(QStringLiteral("nextPageButton"));
+        auto *deleteSource = tab.findChild<QPushButton *>(QStringLiteral("deleteSourceButton"));
+        auto *multiSource = tab.findChild<QPushButton *>(QStringLiteral("multiSourceButton"));
+        auto *autoscroll = tab.findChild<QCheckBox *>(QStringLiteral("autoscrollCheck"));
+        auto *gallery = tab.findChild<QListView *>(QStringLiteral("galleryView"));
+        if (!combo || !searchButton || !loadMore || !nextPage || !deleteSource || !multiSource || !autoscroll || !gallery) {
+            check("the tab's controls are found", false);
+            return;
+        }
+        // The search button is disabled exactly while a round is running.
+        const auto idle = [searchButton]() { return searchButton->isEnabled(); };
+        const auto rows = [gallery]() { return gallery->model()->rowCount(); };
+        const auto pages = [&booru]() {
+            QStringList list;
+            for (const int page : std::as_const(booru.pagesAsked))
+                list << QString::number(page);
+            return list.join(QLatin1Char(','));
+        };
+
+        tab.resize(900, 700);
+        tab.show();
+        tab.start();
+        waitFor(8000, idle);
+        check("the first page is shown", rows() == 5, QString::number(rows()));
+
+        // --- A page that fails is asked for again, not skipped.
+        booru.pagesAsked.clear();
+        booru.failOnce = {1};
+        loadMore->click();
+        waitFor(8000, idle);
+        check("a failed page adds nothing", rows() == 5, QString::number(rows()));
+        check("the error is what the status bar is left showing",
+              statuses.last().startsWith(QStringLiteral("Błąd (Local)")) && statuses.last().contains(QStringLiteral("HTTP 500")),
+              statuses.last());
+        check("the site's own explanation is in the log",
+              logged.join(QLatin1Char('\n')).contains(QStringLiteral("database is busy")));
+        loadMore->click();
+        waitFor(8000, idle);
+        check("\"load more\" asks for the failed page again", pages() == QStringLiteral("1,1") && rows() == 10, pages());
+        loadMore->click();
+        waitFor(8000, idle);
+        check("and then moves on", pages() == QStringLiteral("1,1,2") && rows() == 15, pages());
+
+        booru.pagesAsked.clear();
+        booru.failOnce = {3};
+        nextPage->click();
+        waitFor(8000, idle);
+        nextPage->click();
+        waitFor(8000, idle);
+        check("\"next page\" asks for the failed page again too", pages() == QStringLiteral("3,3") && rows() == 5, pages());
+
+        // --- Autoscroll must not ask for a failing page on every tick.
+        booru.pagesAsked.clear();
+        booru.failAlways = {4};
+        autoscroll->setChecked(true);
+        waitFor(8000, [autoscroll]() { return !autoscroll->isChecked(); });
+        spinFor(500);
+        check("autoscroll stops when the next page fails", !autoscroll->isChecked());
+        check("after asking once", pages() == QStringLiteral("4"), pages());
+        check("and says so", statuses.last().contains(QStringLiteral("Autoscroll")), statuses.last());
+        booru.failAlways.clear();
+
+        // --- A site that cannot be reached.
+        combo->setCurrentIndex(combo->findText(QStringLiteral("Dead")));
+        waitFor(8000, idle);
+        check("a dead site leaves its error in the status bar", statuses.last().startsWith(QStringLiteral("Błąd (Dead)")),
+              statuses.last());
+        check("the view is empty", rows() == 0);
+
+        // --- An error names no address: the address carries the API key.
+        logged.clear();
+        combo->setCurrentIndex(combo->findText(QStringLiteral("Keyed")));
+        waitFor(8000, idle);
+        check("the refusal is reported", statuses.last().contains(QStringLiteral("HTTP 403")), statuses.last());
+        check("without the API key in the status bar", !statuses.join(QLatin1Char('\n')).contains(QStringLiteral("SECRETKEY")));
+        check("and without it in the log", !logged.join(QLatin1Char('\n')).contains(QStringLiteral("SECRETKEY")),
+              logged.join(QStringLiteral(" / ")));
+
+        // --- Several sources at once, one of them dead.
+        QTimer::singleShot(0, []() {
+            auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+            if (!list)
+                return;
+            for (int i = 0; i < list->count(); ++i) {
+                const QString name = list->item(i)->text();
+                list->item(i)->setCheckState(name == QStringLiteral("Local") || name == QStringLiteral("Dead")
+                                                 ? Qt::Checked : Qt::Unchecked);
+            }
+            dialog->accept();
+        });
+        multiSource->click();
+        waitFor(8000, idle);
+        check("the live source's posts are shown", rows() == 5, QString::number(rows()));
+        check("and the dead one is named", statuses.last().contains(QStringLiteral("bez odpowiedzi: Dead")), statuses.last());
+
+        QObject::disconnect(logging);
+    }
+
+    // --- With no startup source the combo shows its first source unselected.
+    settings.setValue(QStringLiteral("startupSources"), QStringList());
+    manager.removeSource(QStringLiteral("Dead"));
+    manager.removeSource(QStringLiteral("Keyed"));
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    {
+        LibraryDatabase library;
+        DownloadManager downloads(&library);
+        SearchTab tab(manager, &library, &downloads);
+        QStringList statuses;
+        QObject::connect(&tab, &SearchTab::statusMessage, [&statuses](const QString &text) { statuses << text; });
+        auto *combo = tab.findChild<QComboBox *>(QStringLiteral("sourceCombo"));
+        auto *searchButton = tab.findChild<QPushButton *>(QStringLiteral("searchButton"));
+        auto *deleteSource = tab.findChild<QPushButton *>(QStringLiteral("deleteSourceButton"));
+        auto *gallery = tab.findChild<QListView *>(QStringLiteral("galleryView"));
+        const auto idle = [searchButton]() { return searchButton->isEnabled(); };
+
+        tab.resize(900, 700);
+        tab.show();
+        tab.start();
+        spinFor(200);
+        check("nothing is searched without a startup source", gallery->model()->rowCount() == 0 && !deleteSource->isEnabled());
+        equal("the combo shows the only source", combo->currentText(), QStringLiteral("Local"));
+
+        // Picking the entry already shown changes no index; it must still work.
+        emit combo->activated(combo->currentIndex());
+        waitFor(8000, idle);
+        check("picking the source already shown searches it", gallery->model()->rowCount() == 5,
+              QString::number(gallery->model()->rowCount()));
+        check("and makes it the one \"delete\" acts on", deleteSource->isEnabled());
+
+        // --- Deleting the last source.
+        answerNextMessageBox(QMessageBox::Yes);
+        deleteSource->click();
+        spinFor(200);
+        check("the last source is gone", manager.sources().isEmpty());
+        check("the view is emptied", gallery->model()->rowCount() == 0);
+        check("\"delete\" has nothing left to act on", !deleteSource->isEnabled());
+        check("only \"add a booru\" is left in the combo", combo->count() == 1);
+        check("the search button is not left disabled", searchButton->isEnabled());
+
+        // The one entry left is already the current one: it must open the
+        // dialog anyway, or there is no way to add a source from here.
+        QString opened;
+        QTimer::singleShot(0, [&opened]() {
+            if (auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget())) {
+                opened = QString::fromLatin1(dialog->metaObject()->className());
+                dialog->reject();
+            }
+        });
+        emit combo->activated(0);
+        equal("picking it opens the \"add a booru\" dialog", opened, QStringLiteral("AddSourceDialog"));
+
+        // --- Restoring the defaults brings the list back and searches nothing.
+        tab.restoreDefaultSources();
+        spinFor(200);
+        check("the default sources are back", manager.sources().size() == builtIn.size(),
+              QString::number(manager.sources().size()));
+        check("one of them is selected again", deleteSource->isEnabled() && combo->count() == builtIn.size() + 1);
+        check("without searching it unasked", gallery->model()->rowCount() == 0 && searchButton->isEnabled());
+    }
+
+    settings.remove(QStringLiteral("startupSources"));
+    settings.remove(QStringLiteral("welcomeCompleted"));
+    settings.remove(QStringLiteral("resultsPerPage"));
+}
+
+void testLibraryTab()
+{
+    begin("Library tab: new downloads, deleting");
+
+    QTemporaryDir inside;  // the download folder
+    QTemporaryDir outside; // a folder the program was never given
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    QFile::remove(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                  + QStringLiteral("/library.sqlite3"));
+    LibraryDatabase library;
+    if (!inside.isValid() || !outside.isValid() || !library.isOpen()) {
+        check("temporary directories and database", false);
+        return;
+    }
+    Blacklist::setAppliesToLibrary(false);
+
+    DownloadManager downloads(&library);
+    downloads.setDownloadDir(inside.path());
+
+    int nextId = 0;
+    const auto addFile = [&library, &nextId](const QString &path) {
+        writeFile(path, pngOfSize(64, 64));
+        Post post;
+        post.id = QString::number(++nextId);
+        post.sourceName = QStringLiteral("Src");
+        post.tags = QStringList{QStringLiteral("tag_a")};
+        library.addOrUpdatePost(post, path);
+    };
+    const QString keptOutside = outside.filePath(QStringLiteral("elsewhere.png"));
+    const QString firstInside = inside.filePath(QStringLiteral("first.png"));
+    addFile(keptOutside);
+    addFile(firstInside);
+
+    LibraryTab tab(&library, &downloads);
+    auto *view = tab.findChild<QListView *>(QStringLiteral("libraryView"));
+    auto *status = tab.findChild<QLabel *>(QStringLiteral("libraryStatusLabel"));
+    if (!view || !status) {
+        check("the tab's widgets are found", false);
+        return;
+    }
+    const auto rows = [view]() { return view->model()->rowCount(); };
+
+    tab.resize(900, 700);
+    tab.show();
+    tab.refreshLibraryFolderTreeRoot();
+    tab.start();
+    check("both files are listed", rows() == 2, QString::number(rows()));
+
+    // --- A finished download shows up without searching again by hand.
+    addFile(inside.filePath(QStringLiteral("second.png")));
+    tab.noteLibraryChanged();
+    check("not on the spot: a batch finishes file by file", rows() == 2);
+    waitFor(5000, [&rows]() { return rows() == 3; });
+    check("a new download appears in the list", rows() == 3, QString::number(rows()));
+
+    // --- But not while the user has files selected: the list would be
+    // read again and the selection lost.
+    view->selectionModel()->select(view->model()->index(0, 0), QItemSelectionModel::ClearAndSelect);
+    addFile(inside.filePath(QStringLiteral("third.png")));
+    tab.noteLibraryChanged();
+    spinFor(1200);
+    check("a selection is left alone", rows() == 3 && view->selectionModel()->hasSelection());
+    tab.hide();
+    tab.show();
+    check("the list catches up when the tab is shown again", rows() == 4, QString::number(rows()));
+
+    // --- Deleting: a file outside the allowed folders is only taken off the
+    // list, and the status must not call that "deleted".
+    check("the outside folder is not an allowed one", !FolderAccessGuard::isAllowed(keptOutside));
+    // Newest first: third, second, first, elsewhere.
+    view->selectionModel()->clearSelection();
+    view->selectionModel()->select(view->model()->index(2, 0), QItemSelectionModel::Select);
+    view->selectionModel()->select(view->model()->index(3, 0), QItemSelectionModel::Select);
+    answerNextMessageBox(QMessageBox::Yes);
+    QMetaObject::invokeMethod(&tab, "deleteSelectedLibraryItems");
+    check("both rows leave the list", rows() == 2 && library.count() == 2,
+          QStringLiteral("%1 rows, %2 in the database").arg(rows()).arg(library.count()));
+    check("the file inside the download folder is deleted", !QFile::exists(firstInside));
+    check("the file outside stays on disk", QFile::exists(keptOutside));
+    check("the status says one file was deleted", status->text().startsWith(QStringLiteral("Usunięto 1 ")), status->text());
+    check("and that the other is still on disk", status->text().contains(QStringLiteral("tylko z biblioteki")), status->text());
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -1791,9 +2747,11 @@ int main(int argc, char **argv)
     QCoreApplication::setOrganizationName(QStringLiteral("blairqt-tests"));
     QCoreApplication::setApplicationName(QStringLiteral("blairqt-tests"));
 
-    // Start from a clean database every run.
-    QFile::remove(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                  + QStringLiteral("/library.sqlite3"));
+    // Start from a clean database and source list every run.
+    const QString appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QFile::remove(appData + QStringLiteral("/library.sqlite3"));
+    QFile::remove(appData + QStringLiteral("/custom_sources.json"));
+    QFile::remove(appData + QStringLiteral("/hidden_sources.json"));
 
     testHtmlEntities();
     testAppFiles();
@@ -1820,6 +2778,16 @@ int main(int argc, char **argv)
     testGelbooruHtmlSource();
     testSiteAccess();
     testAnimatedThumbnails();
+    testQueryEncoding();
+    testTagExclusionLimits();
+    testClipboardImage();
+    testCookieStaysOnItsSite();
+    testDownloadQueue();
+    testThumbnailDecoding();
+    testThumbnailReload();
+    testLibrarySeveralTags();
+    testSearchTab();
+    testLibraryTab();
     // Last: it changes the application palette.
     testTheme();
 

@@ -23,6 +23,9 @@ public:
 
     // Verified against the live API: "-tag" excludes server-side.
     bool supportsTagExclusion() const override { return true; }
+    // Verified against the live API: the 41st term gets HTTP 422, "You
+    // cannot search for more than 40 tags at a time".
+    int maxSearchTerms() const override { return 40; }
 
     QNetworkRequest buildTagSuggestRequest(const QString &prefix) const override;
     QStringList parseTagSuggestions(const QByteArray &data) const override;

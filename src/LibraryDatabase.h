@@ -60,6 +60,8 @@ private:
     bool migrateToTagTable();
     // Rewrites post_tags for one post. Caller holds the transaction.
     bool replaceTags(qint64 rowId, const QString &tags);
+    // How many posts carry a tag, counted no further than a fixed cap.
+    int cappedTagCount(const QString &tag) const;
 
     QSqlDatabase m_db;
 };

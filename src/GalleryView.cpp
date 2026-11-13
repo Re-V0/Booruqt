@@ -46,10 +46,19 @@ public:
         const QPixmap pixmap = index.data(GalleryModel::ThumbnailRole).value<QPixmap>();
         if (!pixmap.isNull()) {
             const QRect target = cellRect.adjusted(kCellMargin, kCellMargin, -kCellMargin, -kCellMargin);
-            const QPixmap scaled = pixmap.scaled(target.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            const QPoint topLeft(target.x() + (target.width() - scaled.width()) / 2,
-                                  target.y() + (target.height() - scaled.height()) / 2);
-            painter->drawPixmap(topLeft, scaled);
+            // Thumbnails arrive at the size of the cell, so this is normally
+            // a plain copy. Only between a change of the cell size and the
+            // arrival of the re-decoded thumbnail is one stretched, and then
+            // by the painter: no scaled copy is built on every repaint.
+            const QSize fitted = pixmap.size().scaled(target.size(), Qt::KeepAspectRatio);
+            const QPoint topLeft(target.x() + (target.width() - fitted.width()) / 2,
+                                  target.y() + (target.height() - fitted.height()) / 2);
+            if (fitted == pixmap.size()) {
+                painter->drawPixmap(topLeft, pixmap);
+            } else {
+                painter->setRenderHint(QPainter::SmoothPixmapTransform);
+                painter->drawPixmap(QRect(topLeft, fitted), pixmap);
+            }
         } else {
             painter->setPen(option.palette.color(QPalette::Disabled, QPalette::Text));
             painter->drawText(cellRect, Qt::AlignCenter, QCoreApplication::translate("GalleryView", "..."));
@@ -135,6 +144,14 @@ void requestVisibleRows(QListView *view, GalleryModel *model, ThumbnailLoader *l
         model->markThumbnailRequested(row);
         loader->request(row, QUrl(model->postAt(row).previewUrl));
     }
+}
+
+void reloadThumbnails(QListView *view, GalleryModel *model, ThumbnailLoader *loader)
+{
+    // In-flight requests still carry the old size.
+    loader->cancelAll();
+    model->requestThumbnailsAgain();
+    requestVisibleRows(view, model, loader);
 }
 
 } // namespace GalleryView

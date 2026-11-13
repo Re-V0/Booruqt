@@ -79,6 +79,19 @@ inline QString fullImageUrl(const Post &post)
     return post.sampleUrl.isEmpty() ? post.previewUrl : post.sampleUrl;
 }
 
+// What "copy image" puts on the clipboard; empty when there is nothing to
+// decode as an image, because the file is a video.
+inline QString clipboardImageUrl(const Post &post)
+{
+    const QString url = fullImageUrl(post);
+    if (url.isEmpty() || isVideoUrl(url))
+        return {};
+    // The address may hide the extension (Shimmie2): go by the post then.
+    if (url == post.fileUrl && isVideoPost(post))
+        return {};
+    return url;
+}
+
 // A file to open, and whether it plays as a video.
 struct MediaLink {
     QString url;

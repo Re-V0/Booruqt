@@ -28,6 +28,8 @@ class QFileSystemModel;
 class QListWidget;
 class QCompleter;
 class QStringListModel;
+class QShowEvent;
+class QTimer;
 class LibraryDatabase;
 class DownloadManager;
 class GalleryModel;
@@ -58,6 +60,11 @@ public:
 
 public slots:
     void searchLibrary();
+    // A download has put a file into the library. The list is read again:
+    // right away while it is untouched (nothing selected, not scrolled), or
+    // else the next time the tab is shown, so that a selection the user is
+    // working with is not thrown away under their hands.
+    void noteLibraryChanged();
     // Asks for a new download folder and offers to move the library there.
     void chooseDownloadDir();
 
@@ -71,6 +78,7 @@ signals:
 protected:
     // Lets Enter start a search instead of being eaten by the suggestion list.
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void loadMoreLibrary();
@@ -87,6 +95,8 @@ private slots:
     void moveSelectedLibraryItems(const QString &targetFolderName);
 
     void onLibraryTagsEdited();
+    void showLibraryTagSuggestions();
+    void refreshIfLibraryChanged();
 
 private:
     void buildUi();
@@ -133,4 +143,14 @@ private:
     // Tag autocomplete from the already-downloaded tags.
     QCompleter *m_libraryTagCompleter = nullptr;
     QStringListModel *m_libraryTagSuggestModel = nullptr;
+    // The query waits for a pause in typing: it counts every row of every
+    // tag with that prefix, which on a large library is felt per keystroke.
+    QTimer *m_libraryTagSuggestTimer = nullptr;
+
+    // Runs once the thumbnail size has stopped changing.
+    QTimer *m_thumbnailReloadTimer = nullptr;
+
+    // Files arrived since the list was read; see noteLibraryChanged().
+    bool m_libraryChanged = false;
+    QTimer *m_libraryRefreshTimer = nullptr;
 };

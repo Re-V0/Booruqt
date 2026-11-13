@@ -36,6 +36,9 @@ public:
     // Rows still waiting for a thumbnail become requestable again. For use
     // after the loader's in-flight requests were cancelled.
     void resetMissingThumbnails();
+    // Every row becomes requestable again and keeps showing the thumbnail it
+    // has until the new one arrives. For use after the thumbnail size changed.
+    void requestThumbnailsAgain();
 
 private:
     QVector<Post> m_posts;

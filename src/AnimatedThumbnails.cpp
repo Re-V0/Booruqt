@@ -101,8 +101,7 @@ private:
         QNetworkRequest req(url);
         req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
         req.setTransferTimeout(30000);
-        SiteAccess::apply(req);
-        m_reply = network->get(req);
+        m_reply = SiteAccess::get(network, req);
 
         connect(m_reply, &QNetworkReply::downloadProgress, this, [this](qint64 received, qint64 total) {
             if (total > AnimatedThumbnails::kMaxDownloadBytes || received > AnimatedThumbnails::kMaxDownloadBytes)

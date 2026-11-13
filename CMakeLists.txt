@@ -214,7 +214,8 @@ else()
 endif()
 
 # Regression tests for the parts that can be checked without a server or a
-# visible window: blacklist rules, tag input, response parsing, the database.
+# visible window: blacklist rules, tag input, response parsing, the database,
+# and the two tabs driven against a server inside the test itself.
 # include(CTest) gives BUILD_TESTING (ON by default), so a packager building
 # with -DBUILD_TESTING=OFF does not pay for a test binary it will never run.
 include(CTest)
@@ -244,6 +245,9 @@ if(BUILD_TESTING)
         src/FolderAccessGuard.cpp
         src/SourceManager.cpp
         src/SourceDetector.cpp
+        src/AddSourceDialog.cpp
+        src/SearchTab.cpp
+        src/LibraryTab.cpp
         resources/resources.qrc
     )
     target_include_directories(blairqt_tests PRIVATE src)

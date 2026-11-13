@@ -25,7 +25,7 @@ QNetworkRequest DanbooruSource::buildSearchRequest(const QString &tags, int page
 {
     QUrl url(m_baseUrl + QStringLiteral("/posts.json"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("tags"), tags);
+    query.addQueryItem(QStringLiteral("tags"), queryValue(tags));
     query.addQueryItem(QStringLiteral("page"), QString::number(page));
     query.addQueryItem(QStringLiteral("limit"), QString::number(perPage));
     url.setQuery(query);
@@ -70,7 +70,7 @@ QNetworkRequest DanbooruSource::buildTagSuggestRequest(const QString &prefix) co
 {
     QUrl url(m_baseUrl + QStringLiteral("/autocomplete.json"));
     QUrlQuery query;
-    query.addQueryItem(QStringLiteral("search[query]"), prefix);
+    query.addQueryItem(QStringLiteral("search[query]"), queryValue(prefix));
     query.addQueryItem(QStringLiteral("search[type]"), QStringLiteral("tag_query"));
     query.addQueryItem(QStringLiteral("limit"), QStringLiteral("10"));
     url.setQuery(query);

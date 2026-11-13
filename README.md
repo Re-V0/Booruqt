@@ -144,13 +144,17 @@ controls that stop making sense.
 Sites behind Cloudflare or similar protection accept a cookie (such as
 `cf_clearance`) and the User-Agent of the browser it came from, pasted in when
 adding the source. They go with every request to that site, whatever its
-engine: searches, tag suggestions, thumbnails, downloads and the viewer.
+engine: searches, tag suggestions, thumbnails, downloads and the viewer. The
+cookie stays with its site: a redirect to another host is refused rather than
+followed with the cookie attached.
 Sites with no API at all can go through the bundled HTML-scrape bridge — those
 posts arrive without tags, rating or dimensions, which is the price of
 scraping HTML.
 
 Every request, status code and response snippet lands in the network log dock.
-When a site misbehaves, that dock is the first place to look.
+When a site misbehaves, that dock is the first place to look. A search that
+fails says so in the status bar — which site, and why — and the page it failed
+on is asked for again by **Load more** or **Next**, not skipped.
 
 Video posts (WebM, MP4) play in the zoom viewer as soon as it opens, in a loop
 and without sound, and so do GIFs. **Settings → Appearance → Animated
@@ -165,7 +169,8 @@ same folders Dolphin, Thunar, Explorer or Finder show. Move files between them
 from inside the app and the tags follow; re-downloading a post you already
 have is detected and skipped. A download is written to a temporary file and
 renamed only when complete, so a broken transfer never leaves half an image
-behind.
+behind. A large batch runs six at a time and the rest wait their turn; the
+Library tab picks up what arrives by itself.
 
 Each image also gets a hidden tags sidecar next to it — `image.png` gets
 `.image.png.txt`, one line of space-separated tags. It follows the file when
@@ -175,13 +180,16 @@ because why not — txt is cheap.
 
 Search the library by tag, filter by folder, with or without subfolders.
 Tags match whole, ignoring case: `solo` does not find `solo_focus`. Zoom opens
-local files instantly, animated GIFs and video included.
+local files instantly, animated GIFs and video included. A downloaded video
+shows its first frame as its thumbnail.
 
 ## Blacklist
 
 A tag blacklist, global or per source, editable in Settings or straight from a
 post's context menu. Sites that understand `-tag` get the exclusions pushed
-into the query; the rest are filtered before they reach the grid.
+into the query; the rest are filtered before they reach the grid. A long list
+is pushed only as far as the site takes it — e621 stops at 40 terms — and
+whatever did not fit is filtered afterwards.
 
 Matching is exact: `solo` does not hide `solo_focus`. It can apply to the
 library too, if you want the same rules on what you already downloaded.
@@ -244,7 +252,7 @@ written owner-only (0600).
 
 ## Tests
 
-No network, no visible window:
+No network beyond this machine, no visible window:
 
 ```bash
 ctest --test-dir build --output-on-failure
@@ -253,9 +261,12 @@ ctest --test-dir build --output-on-failure
 They cover blacklist matching, tag input, response parsing for every engine,
 source detection (against a local server playing each engine), the library
 (whole-tag search, paging, moving files, upgrading an older database),
-downloads, thumbnail loading, which file the viewer plays, animated
-thumbnails (against a local server), themes, the source list, and the rule
-that a plugin never blocks the GUI thread.
+downloads and their queue, thumbnail loading, which file the viewer plays,
+animated thumbnails (against a local server), how search terms are encoded,
+cookies and redirects, themes, the source list, and the rule that a plugin
+never blocks the GUI thread. The Search and Library tabs are driven against a
+local server too: a site that fails, a page that fails, deleting the last
+source, a download landing in the library.
 
 ## Data locations
 
@@ -289,7 +300,7 @@ macOS:
 ## Contributing
 
 Issues and merge requests are welcome. Before sending a patch, run the tests —
-they take a second and need no network and no display:
+they take a quarter of a minute and need no network and no display:
 
 ```bash
 ctest --test-dir build --output-on-failure

@@ -269,6 +269,16 @@
 <context>
     <name>DownloadManager</name>
     <message>
+        <location filename="../src/DownloadManager.cpp" line="113"/>
+        <source>nie można utworzyć folderu pobierania %1</source>
+        <translation>Download-Ordner %1 kann nicht erstellt werden</translation>
+    </message>
+    <message>
+        <location filename="../src/DownloadManager.cpp" line="204"/>
+        <source>przekierowanie na inną stronę (%1) odrzucone</source>
+        <translation>Weiterleitung auf eine andere Seite (%1) abgelehnt</translation>
+    </message>
+    <message>
         <location filename="../src/DownloadManager.cpp" line="152"/>
         <source>serwer zwrócił stronę WWW zamiast pliku (Cloudflare albo wymagane logowanie?)</source>
         <translation>der Server hat eine Webseite statt der Datei geschickt (Cloudflare oder Anmeldung nötig?)</translation>
@@ -338,6 +348,11 @@
 </context>
 <context>
     <name>LibraryTab</name>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="986"/>
+        <source>%1 usunięto tylko z biblioteki - plik został na dysku, bo leży poza dozwolonymi folderami.</source>
+        <translation>%1 nur aus der Bibliothek entfernt - die Datei bleibt auf dem Datenträger, weil sie außerhalb der erlaubten Ordner liegt.</translation>
+    </message>
     <message>
         <location filename="../src/LibraryTab.cpp" line="896"/>
         <source>%1 nie dało się usunąć (brak uprawnień?).</source>
@@ -783,6 +798,26 @@ Nein - die Dateien bleiben am alten Ort und sind nur unter &quot;(alle Ordner)&q
 </context>
 <context>
     <name>SearchTab</name>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="71"/>
+        <source>przekierowanie na inną stronę (%1) odrzucone</source>
+        <translation>Weiterleitung auf eine andere Seite (%1) abgelehnt</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="759"/>
+        <source>nie udało się zbudować zapytania</source>
+        <translation>Anfrage konnte nicht erstellt werden</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="804"/>
+        <source>- bez odpowiedzi: %1 (szczegóły w logu sieciowym)</source>
+        <translation>- keine Antwort von: %1 (Details im Netzwerkprotokoll)</translation>
+    </message>
+    <message>
+        <location filename="../src/SearchTab.cpp" line="811"/>
+        <source>Autoscroll zatrzymany.</source>
+        <translation>Autoscroll gestoppt.</translation>
+    </message>
     <message>
         <location filename="../src/SearchTab.cpp" line="693"/>
         <source>%1: %2 wyników w widoku (strona %3, +%4)</source>

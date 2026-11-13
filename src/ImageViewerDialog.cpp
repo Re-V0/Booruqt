@@ -38,7 +38,6 @@ QNetworkRequest mediaRequest(const QString &url)
     req.setHeader(QNetworkRequest::UserAgentHeader, blairqtUserAgent());
     // Aborts after 30 s without data, not after 30 s in total.
     req.setTransferTimeout(30000);
-    SiteAccess::apply(req);
     return req;
 }
 
@@ -98,7 +97,7 @@ ImageViewerDialog::~ImageViewerDialog()
 
 void ImageViewerDialog::loadImage(const QString &url)
 {
-    QNetworkReply *reply = m_network->get(mediaRequest(url));
+    QNetworkReply *reply = SiteAccess::get(m_network, mediaRequest(url));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
@@ -173,7 +172,7 @@ void ImageViewerDialog::loadVideo(const QString &url)
         return;
     }
 
-    m_videoReply = m_network->get(mediaRequest(url));
+    m_videoReply = SiteAccess::get(m_network, mediaRequest(url));
     // Written as it arrives: a video can be large.
     connect(m_videoReply, &QNetworkReply::readyRead, this, [this]() {
         const QByteArray chunk = m_videoReply->readAll();
