@@ -1324,14 +1324,13 @@ public:
 
     explicit RouteServer(Handler handler) : m_handler(std::move(handler))
     {
-        connect(this, &QTcpServer::newConnection, this, [this]() {
-            while (hasPendingConnections()) {
-                QTcpSocket *socket = nextPendingConnection();
-                connect(socket, &QTcpSocket::readyRead, socket, [this, socket]() { onReadyRead(socket); });
-                connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
-            }
-        });
+        acceptFrom(this);
         listen(QHostAddress::LocalHost, 0);
+        // The same port on the IPv6 loopback too, where the machine has one.
+        // "localhost" is ::1 first on macOS, and a connection to a port
+        // nobody listens on is not refused there but left to time out.
+        acceptFrom(&m_ipv6);
+        m_ipv6.listen(QHostAddress::LocalHostIPv6, serverPort());
     }
 
     QString base() const { return QStringLiteral("http://127.0.0.1:%1").arg(serverPort()); }
@@ -1362,6 +1361,17 @@ public:
     }
 
 private:
+    void acceptFrom(QTcpServer *server)
+    {
+        connect(server, &QTcpServer::newConnection, this, [this, server]() {
+            while (server->hasPendingConnections()) {
+                QTcpSocket *socket = server->nextPendingConnection();
+                connect(socket, &QTcpSocket::readyRead, socket, [this, socket]() { onReadyRead(socket); });
+                connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+            }
+        });
+    }
+
     void onReadyRead(QTcpSocket *socket)
     {
         const QByteArray buffered = socket->property("buffered").toByteArray() + socket->readAll();
@@ -1397,6 +1407,24 @@ private:
     }
 
     Handler m_handler;
+    QTcpServer m_ipv6;
+};
+
+// A site that is down: it takes the connection and drops it at once.
+// Not a closed port, which some systems (the macOS CI runners) do not
+// refuse but leave to time out.
+class DroppingServer : public QTcpServer {
+public:
+    DroppingServer()
+    {
+        connect(this, &QTcpServer::newConnection, this, [this]() {
+            while (hasPendingConnections())
+                nextPendingConnection()->abort();
+        });
+        listen(QHostAddress::LocalHost, 0);
+    }
+
+    QString base() const { return QStringLiteral("http://127.0.0.1:%1").arg(serverPort()); }
 };
 
 // Runs one detection to its end.
@@ -2449,8 +2477,9 @@ void testSearchTab()
     begin("Search tab: errors, pages and sources");
 
     FakeBooru booru;
-    if (!booru.server.isListening()) {
-        check("test server", false);
+    DroppingServer down;
+    if (!booru.server.isListening() || !down.isListening()) {
+        check("test servers", false);
         return;
     }
 
@@ -2462,8 +2491,7 @@ void testSearchTab()
     for (const QString &name : std::as_const(builtIn))
         manager.removeSource(name);
     manager.addCustomSource(QStringLiteral("Local"), QStringLiteral("gelbooru"), booru.server.base());
-    // Port 1 on this machine: the connection is refused at once.
-    manager.addCustomSource(QStringLiteral("Dead"), QStringLiteral("gelbooru"), QStringLiteral("http://127.0.0.1:1"));
+    manager.addCustomSource(QStringLiteral("Dead"), QStringLiteral("gelbooru"), down.base());
     manager.addCustomSource(QStringLiteral("Keyed"), QStringLiteral("gelbooru"), booru.server.base(),
                             QStringLiteral("SECRETKEY"), QStringLiteral("42"));
 
