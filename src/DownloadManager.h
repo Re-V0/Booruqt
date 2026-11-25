@@ -45,6 +45,8 @@ public:
 
     // So callers deleting an image can find its sidecar too.
     static QString sidecarPathFor(const QString &imagePath);
+    // Writes the hidden tags sidecar: the tags on one line, space-separated.
+    static void writeSidecar(const QString &path, const QStringList &tags);
 
 signals:
     // path is empty on failure; skipped means it already existed.

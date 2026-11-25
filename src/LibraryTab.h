@@ -60,6 +60,12 @@ public:
 
 public slots:
     void searchLibrary();
+    // Asks for pictures and videos anywhere on the computer and imports
+    // copies of them into the folder chosen above the grid.
+    void chooseFilesToImport();
+    // The import itself, after the question for tags (askForTags) or
+    // without it. Folders count with their subfolders.
+    void importPaths(const QStringList &paths, bool askForTags = true);
     // A download has put a file into the library. The list is read again:
     // right away while it is untouched (nothing selected, not scrolled), or
     // else the next time the tab is shown, so that a selection the user is
@@ -106,6 +112,9 @@ private:
     QStringList libraryFolderNames() const;
     QString currentLibraryFolderSelection() const;
     void updateLibraryDeleteFolderButtonState();
+    // The folder the selection above the grid stands for: an import or a
+    // new folder goes there. "All folders" means the main one.
+    QString selectedFolderPath() const;
     // Moves indexed files and subfolders; returns a status message.
     QString relocateLibrary(const QString &oldDir, const QString &newDir, const QVector<Post> &posts);
 
@@ -130,6 +139,7 @@ private:
     // Real nested folders on disk. Combo data: * = all, empty = root, else path.
     QComboBox *m_libraryFolderCombo;
     QPushButton *m_newFolderButton;
+    QPushButton *m_importButton;
     QPushButton *m_deleteFolderButton;
 
     // Optional tree view, alternative to the flat combo above.

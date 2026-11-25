@@ -12,6 +12,7 @@
 #include "GalleryModel.h"
 #include "GalleryView.h"
 #include "LibraryDatabase.h"
+#include "LibraryImport.h"
 #include "Paging.h"
 #include "TagLineEdit.h"
 #include "ThumbnailLoader.h"
@@ -25,6 +26,8 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QDirIterator>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -33,15 +36,18 @@
 #include <QHBoxLayout>
 #include <QHash>
 #include <QImage>
+#include <QImageReader>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListView>
 #include <QListWidget>
+#include <QMimeData>
 #include <QMenu>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -49,6 +55,7 @@
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
+#include <QStandardPaths>
 #include <QStringListModel>
 #include <QTimer>
 #include <QTreeView>
@@ -102,6 +109,10 @@ LibraryTab::LibraryTab(LibraryDatabase *library, DownloadManager *downloadManage
     connect(m_libraryFolderCombo, &QComboBox::currentIndexChanged, this, &LibraryTab::onLibraryFolderChanged);
     connect(m_newFolderButton, &QPushButton::clicked, this, &LibraryTab::createNewLibraryFolder);
     connect(m_deleteFolderButton, &QPushButton::clicked, this, &LibraryTab::deleteCurrentLibraryFolder);
+    connect(m_importButton, &QPushButton::clicked, this, &LibraryTab::chooseFilesToImport);
+    // Files and folders dropped on the grid are imported too.
+    m_libraryView->viewport()->setAcceptDrops(true);
+    m_libraryView->viewport()->installEventFilter(this);
     connect(m_libraryTreeViewCheck, &QCheckBox::toggled, this, &LibraryTab::toggleLibraryTreeView);
     connect(m_libraryIncludeSubfoldersCheck, &QCheckBox::toggled, this, &LibraryTab::searchLibrary);
     connect(m_libraryFolderTree->selectionModel(), &QItemSelectionModel::currentChanged,
@@ -207,6 +218,37 @@ void LibraryTab::setupTagCompleter()
 
 bool LibraryTab::eventFilter(QObject *watched, QEvent *event)
 {
+    if (watched == m_libraryView->viewport()) {
+        const auto localPaths = [](const QMimeData *mime) {
+            QStringList paths;
+            if (mime && mime->hasUrls()) {
+                for (const QUrl &url : mime->urls()) {
+                    if (url.isLocalFile())
+                        paths.append(url.toLocalFile());
+                }
+            }
+            return paths;
+        };
+        if (event->type() == QEvent::DragEnter || event->type() == QEvent::DragMove) {
+            auto *drag = static_cast<QDragMoveEvent *>(event);
+            if (!localPaths(drag->mimeData()).isEmpty()) {
+                drag->setDropAction(Qt::CopyAction);
+                drag->accept();
+                return true;
+            }
+        } else if (event->type() == QEvent::Drop) {
+            auto *drop = static_cast<QDropEvent *>(event);
+            const QStringList paths = localPaths(drop->mimeData());
+            if (!paths.isEmpty()) {
+                drop->setDropAction(Qt::CopyAction);
+                drop->accept();
+                // After the drop has ended: the question would otherwise
+                // open while the file manager still waits for an answer.
+                QTimer::singleShot(0, this, [this, paths]() { importPaths(paths); });
+                return true;
+            }
+        }
+    }
     if (event->type() == QEvent::KeyPress) {
         const int key = static_cast<QKeyEvent *>(event)->key();
         if (key == Qt::Key_Return || key == Qt::Key_Enter) {
@@ -260,10 +302,15 @@ void LibraryTab::buildUi()
     m_libraryIncludeSubfoldersCheck = new QCheckBox(tr("z podfolderami"), this);
     m_newFolderButton = new QPushButton(tr("Nowy folder..."), this);
     m_deleteFolderButton = new QPushButton(tr("Usuń folder..."), this);
+    m_importButton = new QPushButton(tr("Importuj pliki..."), this);
+    m_importButton->setObjectName(QStringLiteral("importButton"));
+    m_importButton->setToolTip(tr("Kopiuje obrazy i wideo z dowolnego miejsca do wybranego folderu biblioteki. "
+                                  "Pliki i foldery można też upuścić na siatkę."));
     folderBar->addWidget(m_libraryFolderCombo, 1);
     folderBar->addWidget(m_libraryTreeViewCheck);
     folderBar->addWidget(m_newFolderButton);
     folderBar->addWidget(m_deleteFolderButton);
+    folderBar->addWidget(m_importButton);
     rootLayout->addLayout(folderBar);
 
     auto *searchBar = new QHBoxLayout();
@@ -582,6 +629,69 @@ QString LibraryTab::currentLibraryFolderSelection() const
         return QDir(downloadDirAbs).relativeFilePath(selectedAbs);
     }
     return m_libraryFolderCombo ? m_libraryFolderCombo->currentData().toString() : QStringLiteral("*");
+}
+
+QString LibraryTab::selectedFolderPath() const
+{
+    const QString downloadDir = m_downloadManager->downloadDir();
+    const QString selection = currentLibraryFolderSelection();
+    if (selection.isEmpty() || selection == QStringLiteral("*"))
+        return downloadDir;
+    return downloadDir + QLatin1Char('/') + selection;
+}
+
+void LibraryTab::chooseFilesToImport()
+{
+    QStringList patterns;
+    for (const QByteArray &format : QImageReader::supportedImageFormats())
+        patterns.append(QStringLiteral("*.") + QString::fromLatin1(format));
+    for (const QString &video : {QStringLiteral("webm"), QStringLiteral("mp4"), QStringLiteral("m4v"),
+                                 QStringLiteral("mov"), QStringLiteral("mkv"), QStringLiteral("avi")})
+        patterns.append(QStringLiteral("*.") + video);
+    const QString filter = tr("Obrazy i wideo (%1)").arg(patterns.join(QLatin1Char(' ')))
+        + QStringLiteral(";;") + tr("Wszystkie pliki (*)");
+    const QStringList files = QFileDialog::getOpenFileNames(this, tr("Importuj pliki do biblioteki"),
+        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation), filter);
+    if (!files.isEmpty())
+        importPaths(files);
+}
+
+void LibraryTab::importPaths(const QStringList &paths, bool askForTags)
+{
+    if (paths.isEmpty() || !m_library)
+        return;
+    const QString target = selectedFolderPath();
+
+    QStringList tags;
+    if (askForTags) {
+        bool ok = false;
+        const QString text = QInputDialog::getText(this, tr("Importuj pliki do biblioteki"),
+            tr("Kopie trafią do: %1\nOryginały zostaną na swoim miejscu.\n\n"
+               "Tagi dla wszystkich importowanych plików (opcjonalnie, oddzielone spacjami):")
+                .arg(QDir::toNativeSeparators(target)),
+            QLineEdit::Normal, QString(), &ok);
+        if (!ok)
+            return;
+        tags = text.split(QRegularExpression(QStringLiteral("[\\s,]+")), Qt::SkipEmptyParts);
+    }
+
+    QGuiApplication::setOverrideCursor(Qt::WaitCursor);
+    const LibraryImport::Result result = LibraryImport::importPaths(m_library, paths, target,
+                                                                    m_downloadManager->downloadDir(), tags);
+    QGuiApplication::restoreOverrideCursor();
+
+    populateLibraryFolders();
+    searchLibrary();
+
+    QStringList parts;
+    parts.append(tr("Zaimportowano %1 plik(ów) do %2.").arg(result.imported).arg(QDir::toNativeSeparators(target)));
+    if (result.alreadyInLibrary > 0)
+        parts.append(tr("%1 już było w bibliotece.").arg(result.alreadyInLibrary));
+    if (result.notMedia > 0)
+        parts.append(tr("%1 pominiętych - to nie obraz ani wideo.").arg(result.notMedia));
+    if (!result.errors.isEmpty())
+        parts.append(tr("Błędy: %1. Pierwszy: %2").arg(result.errors.size()).arg(result.errors.first()));
+    m_libraryStatusLabel->setText(parts.join(QLatin1Char(' ')));
 }
 
 void LibraryTab::updateLibraryDeleteFolderButtonState()

@@ -41,6 +41,11 @@ public:
     // Path of an already-indexed post, or empty if unknown.
     QString pathForPost(const QString &source, const QString &postId) const;
 
+    // Whether the file has an entry, however its path was written then
+    // ("dir//name" from a download folder set with a trailing slash, or
+    // through a symbolic link).
+    bool hasFile(const QString &filePath) const;
+
     // Downloaded tags starting with prefix, most frequent first.
     QStringList suggestTags(const QString &prefix, int limit) const;
 

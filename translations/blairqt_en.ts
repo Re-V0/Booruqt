@@ -347,7 +347,86 @@
     </message>
 </context>
 <context>
+    <name>LibraryImport</name>
+    <message>
+        <location filename="../src/LibraryImport.cpp" line="123"/>
+        <source>baza biblioteki niedostępna</source>
+        <translation>the library database is unavailable</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryImport.cpp" line="130"/>
+        <source>%1 jest poza dozwolonym zakresem dostępu</source>
+        <translation>%1 is outside the allowed access scope</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryImport.cpp" line="147"/>
+        <source>%1: nie można odczytać pliku</source>
+        <translation>%1: cannot read the file</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryImport.cpp" line="175"/>
+        <source>%1: nie można skopiować do %2</source>
+        <translation>%1: cannot copy to %2</translation>
+    </message>
+</context>
+<context>
     <name>LibraryTab</name>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="305"/>
+        <source>Importuj pliki...</source>
+        <translation>Import files...</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="307"/>
+        <source>Kopiuje obrazy i wideo z dowolnego miejsca do wybranego folderu biblioteki. Pliki i foldery można też upuścić na siatkę.</source>
+        <translation>Copies pictures and videos from anywhere into the chosen library folder. Files and folders can also be dropped on the grid.</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="651"/>
+        <source>Obrazy i wideo (%1)</source>
+        <translation>Pictures and videos (%1)</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="652"/>
+        <source>Wszystkie pliki (*)</source>
+        <translation>All files (*)</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="653"/>
+        <source>Importuj pliki do biblioteki</source>
+        <translation>Import files into the library</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="669"/>
+        <source>Kopie trafią do: %1
+Oryginały zostaną na swoim miejscu.
+
+Tagi dla wszystkich importowanych plików (opcjonalnie, oddzielone spacjami):</source>
+        <translation>The copies go to: %1
+The originals stay where they are.
+
+Tags for all imported files (optional, separated by spaces):</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="687"/>
+        <source>Zaimportowano %1 plik(ów) do %2.</source>
+        <translation>Imported %1 file(s) into %2.</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="689"/>
+        <source>%1 już było w bibliotece.</source>
+        <translation>%1 already in the library.</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="691"/>
+        <source>%1 pominiętych - to nie obraz ani wideo.</source>
+        <translation>%1 skipped - not a picture or video.</translation>
+    </message>
+    <message>
+        <location filename="../src/LibraryTab.cpp" line="693"/>
+        <source>Błędy: %1. Pierwszy: %2</source>
+        <translation>Errors: %1. The first: %2</translation>
+    </message>
     <message>
         <location filename="../src/LibraryTab.cpp" line="986"/>
         <source>%1 usunięto tylko z biblioteki - plik został na dysku, bo leży poza dozwolonymi folderami.</source>

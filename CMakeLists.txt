@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(blairqt VERSION 1.1.2 LANGUAGES CXX)
+project(blairqt VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -68,6 +68,8 @@ add_executable(blairqt
     src/DownloadManager.cpp
     src/LibraryDatabase.h
     src/LibraryDatabase.cpp
+    src/LibraryImport.h
+    src/LibraryImport.cpp
     src/DetailsPanel.h
     src/DetailsPanel.cpp
     src/ImageViewerDialog.h
@@ -248,6 +250,7 @@ if(BUILD_TESTING)
         src/AddSourceDialog.cpp
         src/SearchTab.cpp
         src/LibraryTab.cpp
+        src/LibraryImport.cpp
         resources/resources.qrc
     )
     target_include_directories(blairqt_tests PRIVATE src)

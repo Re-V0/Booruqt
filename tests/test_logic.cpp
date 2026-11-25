@@ -37,6 +37,7 @@
 #include "GalleryView.h"
 #include "SearchTab.h"
 #include "LibraryTab.h"
+#include "LibraryImport.h"
 #include "FolderAccessGuard.h"
 
 #include <QApplication>
@@ -45,6 +46,9 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QImage>
+#include <QInputDialog>
+#include <QMimeData>
+#include <QDropEvent>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QListWidget>
@@ -78,6 +82,7 @@
 #include <QSet>
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <iostream>
 
 namespace {
@@ -2765,6 +2770,225 @@ void testLibraryTab()
     check("and that the other is still on disk", status->text().contains(QStringLiteral("tylko z biblioteki")), status->text());
 }
 
+
+// Fills in and accepts the text question that is about to open; polls,
+// since it may open only after a queued call.
+void answerNextInputDialog(const QString &text, bool *answered = nullptr)
+{
+    auto *poll = new QTimer();
+    poll->setInterval(20);
+    auto tries = std::make_shared<int>(0);
+    QObject::connect(poll, &QTimer::timeout, [poll, text, answered, tries]() {
+        if (auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget())) {
+            dialog->setTextValue(text);
+            dialog->accept();
+            if (answered)
+                *answered = true;
+            poll->deleteLater();
+        } else if (++*tries > 250) {
+            poll->deleteLater();
+        }
+    });
+    poll->start();
+}
+
+QStringList sidecarOf(const QString &imagePath)
+{
+    QFile file(DownloadManager::sidecarPathFor(imagePath));
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    return QString::fromUtf8(file.readAll()).split(QLatin1Char(' '), Qt::SkipEmptyParts);
+}
+
+void testLibraryImport()
+{
+    begin("Importing pictures from anywhere into the library");
+
+    QTemporaryDir library; // the download folder
+    QTemporaryDir outside; // the user's other pictures
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    QFile::remove(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                  + QStringLiteral("/library.sqlite3"));
+    LibraryDatabase db;
+    if (!library.isValid() || !outside.isValid() || !db.isOpen()) {
+        check("temporary directories and database", false);
+        return;
+    }
+    DownloadManager downloads(&db);
+    downloads.setDownloadDir(library.path()); // what makes it an allowed folder
+
+    check("pictures and videos count as media", LibraryImport::isMedia(QStringLiteral("/x/a.PNG"))
+              && LibraryImport::isMedia(QStringLiteral("a.jpg")) && LibraryImport::isMedia(QStringLiteral("a.webm")));
+    check("other files do not", !LibraryImport::isMedia(QStringLiteral("notes.txt"))
+              && !LibraryImport::isMedia(QStringLiteral("archive.zip")) && !LibraryImport::isMedia(QStringLiteral("noext")));
+
+    // a.png with its own tags sidecar; a copy of it under another name; a
+    // folder with one more picture; a video; a text file.
+    const QString a = outside.filePath(QStringLiteral("a.png"));
+    writeFile(a, pngOfSize(40, 30, Qt::red));
+    DownloadManager::writeSidecar(DownloadManager::sidecarPathFor(a), {QStringLiteral("red_hair")});
+    const QString copyOfA = outside.filePath(QStringLiteral("same_as_a.png"));
+    QFile::copy(a, copyOfA);
+    QDir(outside.path()).mkpath(QStringLiteral("sub/deeper"));
+    const QString c = outside.filePath(QStringLiteral("sub/deeper/c.png"));
+    writeFile(c, pngOfSize(20, 20, Qt::blue));
+    const QString clip = outside.filePath(QStringLiteral("clip.mp4"));
+    writeFile(clip, QByteArray("not really a video, but named like one"));
+    const QString notes = outside.filePath(QStringLiteral("notes.txt"));
+    writeFile(notes, QByteArray("hello"));
+
+    const QString target = library.filePath(QStringLiteral("imported"));
+    const LibraryImport::Result result = LibraryImport::importPaths(&db,
+        {a, outside.filePath(QStringLiteral("sub")), clip, notes, copyOfA}, target, library.path(),
+        {QStringLiteral("mine")});
+    check("pictures, a folder's pictures and a video are imported", result.imported == 3,
+          QString::number(result.imported) + QStringLiteral(" / ") + result.errors.join(QStringLiteral("; ")));
+    check("the same file under another name is recognised", result.alreadyInLibrary == 1);
+    check("a text file is left out", result.notMedia == 1);
+    check("nothing failed", result.failed == 0 && result.errors.isEmpty(), result.errors.join(QStringLiteral("; ")));
+    check("the originals stay where they were", QFile::exists(a) && QFile::exists(c) && QFile::exists(clip));
+    check("the copies are in the chosen folder", QFile::exists(target + QStringLiteral("/a.png"))
+              && QFile::exists(target + QStringLiteral("/c.png")) && QFile::exists(target + QStringLiteral("/clip.mp4")));
+    equal("the file's own tags and the given ones", sidecarOf(target + QStringLiteral("/a.png")).join(QLatin1Char(' ')),
+          QStringLiteral("red_hair mine"));
+    check("the library finds them by tag", db.search(QStringLiteral("mine"), -1, 0).size() == 3
+              && db.search(QStringLiteral("red_hair mine"), -1, 0).size() == 1);
+    const QVector<Post> red = db.search(QStringLiteral("red_hair"), -1, 0);
+    check("with the picture's size and a source of its own", red.size() == 1 && red.first().width == 40
+              && red.first().height == 30 && red.first().sourceName == LibraryImport::kSourceName);
+
+    // Again: nothing new.
+    const LibraryImport::Result again = LibraryImport::importPaths(&db, {a}, target, library.path());
+    check("importing the same file again adds nothing", again.imported == 0 && again.alreadyInLibrary == 1
+              && !QFile::exists(target + QStringLiteral("/a (2).png")));
+
+    // Another picture with a name already taken.
+    QDir(outside.path()).mkpath(QStringLiteral("other"));
+    const QString otherA = outside.filePath(QStringLiteral("other/a.png"));
+    writeFile(otherA, pngOfSize(10, 10, Qt::green));
+    const LibraryImport::Result named = LibraryImport::importPaths(&db, {otherA}, target, library.path());
+    check("a taken name gets a number", named.imported == 1 && QFile::exists(target + QStringLiteral("/a (2).png"))
+              && named.importedPaths.value(0) == target + QStringLiteral("/a (2).png"));
+
+    // A download already in the library keeps its site and tags.
+    const QString downloaded = library.filePath(QStringLiteral("Danbooru_1.png"));
+    writeFile(downloaded, pngOfSize(12, 12, Qt::yellow));
+    Post post;
+    post.id = QStringLiteral("1");
+    post.sourceName = QStringLiteral("Danbooru");
+    post.tags = QStringList{QStringLiteral("from_the_site")};
+    db.addOrUpdatePost(post, downloaded);
+    // Stored the way a download folder set with a trailing slash writes it.
+    const QString doubleSlashed = library.path() + QStringLiteral("//Danbooru_2.png");
+    writeFile(library.filePath(QStringLiteral("Danbooru_2.png")), pngOfSize(13, 13, Qt::cyan));
+    post.id = QStringLiteral("2");
+    db.addOrUpdatePost(post, doubleSlashed);
+    const LibraryImport::Result inPlace = LibraryImport::importPaths(&db,
+        {downloaded, library.filePath(QStringLiteral("Danbooru_2.png"))}, target, library.path(), {QStringLiteral("mine")});
+    check("a file the library has is not imported twice", inPlace.imported == 0 && inPlace.alreadyInLibrary == 2);
+    equal("and keeps its site", db.pathForPost(QStringLiteral("Danbooru"), QStringLiteral("1")), downloaded);
+    check("and its tags", db.search(QStringLiteral("from_the_site"), -1, 0).size() == 2
+              && db.search(QStringLiteral("from_the_site mine"), -1, 0).isEmpty());
+
+    // A file put into the library's folders by hand is indexed where it is.
+    const QString byHand = library.filePath(QStringLiteral("by_hand.png"));
+    writeFile(byHand, pngOfSize(14, 14, Qt::magenta));
+    const LibraryImport::Result here = LibraryImport::importPaths(&db, {byHand}, target, library.path());
+    check("a file already in the library's folders is indexed in place", here.imported == 1
+              && here.importedPaths.value(0) == byHand && !QFile::exists(target + QStringLiteral("/by_hand.png")));
+
+    // Nothing is written outside the allowed folders.
+    QTemporaryDir forbidden;
+    const LibraryImport::Result refused = LibraryImport::importPaths(&db, {otherA}, forbidden.path(), library.path());
+    check("a folder outside the allowed ones is refused", refused.imported == 0 && !refused.errors.isEmpty()
+              && QDir(forbidden.path()).entryList(QDir::Files).isEmpty());
+}
+
+void testLibraryTabImport()
+{
+    begin("Library tab: importing with the button and by dropping");
+
+    QTemporaryDir library;
+    QTemporaryDir outside;
+    QSqlDatabase::removeDatabase(QStringLiteral("blairqt_library"));
+    QFile::remove(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                  + QStringLiteral("/library.sqlite3"));
+    LibraryDatabase db;
+    if (!library.isValid() || !outside.isValid() || !db.isOpen()) {
+        check("temporary directories and database", false);
+        return;
+    }
+    Blacklist::setAppliesToLibrary(false);
+    DownloadManager downloads(&db);
+    downloads.setDownloadDir(library.path());
+    QDir(library.path()).mkpath(QStringLiteral("art"));
+
+    LibraryTab tab(&db, &downloads);
+    auto *view = tab.findChild<QListView *>(QStringLiteral("libraryView"));
+    auto *status = tab.findChild<QLabel *>(QStringLiteral("libraryStatusLabel"));
+    auto *button = tab.findChild<QPushButton *>(QStringLiteral("importButton"));
+    auto *folders = tab.findChildren<QComboBox *>().value(0);
+    if (!view || !status || !button || !folders) {
+        check("the tab's widgets are found", false);
+        return;
+    }
+    tab.resize(900, 700);
+    tab.show();
+    tab.refreshLibraryFolderTreeRoot();
+    tab.start();
+    check("the import button is there", button->isVisibleTo(&tab) && button->isEnabled());
+
+    // The folder chosen above the grid is where the copies go.
+    folders->setCurrentIndex(folders->findData(QStringLiteral("art")));
+    const QString one = outside.filePath(QStringLiteral("one.png"));
+    writeFile(one, pngOfSize(32, 32, Qt::red));
+    bool answered = false;
+    answerNextInputDialog(QStringLiteral("cat, sky"), &answered);
+    tab.importPaths({one});
+    check("the import asks for tags", answered);
+    check("the copy is in the chosen folder", QFile::exists(library.filePath(QStringLiteral("art/one.png"))));
+    check("and shows up in the grid", view->model()->rowCount() == 1, QString::number(view->model()->rowCount()));
+    check("the status says so", status->text().contains(QStringLiteral("Zaimportowano 1 ")), status->text());
+    equal("tags are split at spaces and commas", sidecarOf(library.filePath(QStringLiteral("art/one.png"))).join(QLatin1Char(' ')),
+          QStringLiteral("cat sky"));
+
+    // Cancelling the question imports nothing.
+    const QString two = outside.filePath(QStringLiteral("two.png"));
+    writeFile(two, pngOfSize(32, 32, Qt::green));
+    QTimer::singleShot(0, []() {
+        if (auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget()))
+            dialog->reject();
+    });
+    tab.importPaths({two});
+    check("cancelling imports nothing", !QFile::exists(library.filePath(QStringLiteral("art/two.png"))));
+
+    // Dropping a file from the file manager onto the grid.
+    auto *mime = new QMimeData();
+    mime->setUrls({QUrl::fromLocalFile(two)});
+    const QPoint at = view->viewport()->rect().center();
+    QDragEnterEvent enter(at, Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(view->viewport(), &enter);
+    check("the grid accepts dropped files", enter.isAccepted());
+    QDropEvent drop(QPointF(at), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+    answered = false;
+    answerNextInputDialog(QString(), &answered);
+    QApplication::sendEvent(view->viewport(), &drop);
+    QElapsedTimer waited;
+    waited.start();
+    while (!QFile::exists(library.filePath(QStringLiteral("art/two.png"))) && waited.elapsed() < 5000)
+        QApplication::processEvents(QEventLoop::AllEvents, 20);
+    check("a dropped file is imported", answered && QFile::exists(library.filePath(QStringLiteral("art/two.png"))));
+    check("and shows up in the grid", view->model()->rowCount() == 2, QString::number(view->model()->rowCount()));
+    delete mime;
+
+    // Something that is no file is not taken.
+    QMimeData text;
+    text.setText(QStringLiteral("just text"));
+    QDragEnterEvent textEnter(at, Qt::CopyAction, &text, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(view->viewport(), &textEnter);
+    check("text dragged over the grid is not accepted", !textEnter.isAccepted());
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -2816,6 +3040,8 @@ int main(int argc, char **argv)
     testLibrarySeveralTags();
     testSearchTab();
     testLibraryTab();
+    testLibraryImport();
+    testLibraryTabImport();
     // Last: it changes the application palette.
     testTheme();
 

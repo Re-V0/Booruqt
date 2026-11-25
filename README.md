@@ -90,8 +90,8 @@ Gentoo — drop the ebuild into a local overlay:
 
 ```bash
 mkdir -p /var/db/repos/local/media-gfx/blairqt
-cp blairqt-1.1.2.ebuild /var/db/repos/local/media-gfx/blairqt/
-ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-1.1.2.ebuild manifest
+cp blairqt-1.2.0.ebuild /var/db/repos/local/media-gfx/blairqt/
+ebuild /var/db/repos/local/media-gfx/blairqt/blairqt-1.2.0.ebuild manifest
 emerge -av media-gfx/blairqt
 ```
 
@@ -178,6 +178,10 @@ you move it, and it is what lets another tool (or you, with `grep`) read the
 tags without touching the database. The metadata is stored as `.txt` as well,
 because why not — txt is cheap.
 
+**Import files...**, or files and folders dropped on the grid, copy
+pictures from elsewhere into the chosen folder, with any tags you type in.
+The same file twice is noticed by its content.
+
 Search the library by tag, filter by folder, with or without subfolders.
 Tags match whole, ignoring case: `solo` does not find `solo_focus`. Zoom opens
 local files instantly, animated GIFs and video included. A downloaded video
@@ -261,7 +265,7 @@ ctest --test-dir build --output-on-failure
 They cover blacklist matching, tag input, response parsing for every engine,
 source detection (against a local server playing each engine), the library
 (whole-tag search, paging, moving files, upgrading an older database),
-downloads and their queue, thumbnail loading, which file the viewer plays,
+downloads and their queue, importing local files, thumbnail loading, which file the viewer plays,
 animated thumbnails (against a local server), how search terms are encoded,
 cookies and redirects, themes, the source list, and the rule that a plugin
 never blocks the GUI thread. The Search and Library tabs are driven against a

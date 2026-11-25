@@ -10,6 +10,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDir>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <QDateTime>
 #include <QDebug>
@@ -382,6 +383,24 @@ QString LibraryDatabase::pathForPost(const QString &source, const QString &postI
     if (q.exec() && q.next())
         return q.value(0).toString();
     return {};
+}
+
+bool LibraryDatabase::hasFile(const QString &filePath) const
+{
+    if (!m_db.isOpen() || filePath.isEmpty())
+        return false;
+    const QString clean = QDir::cleanPath(QFileInfo(filePath).absoluteFilePath());
+    const QString canonical = QFileInfo(filePath).canonicalFilePath();
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+        "SELECT 1 FROM posts WHERE file_path IN (:given, :clean, :canonical) "
+        "OR replace(file_path, '//', '/') IN (:clean2, :canonical2) LIMIT 1"));
+    q.bindValue(QStringLiteral(":given"), filePath);
+    q.bindValue(QStringLiteral(":clean"), clean);
+    q.bindValue(QStringLiteral(":canonical"), canonical);
+    q.bindValue(QStringLiteral(":clean2"), clean);
+    q.bindValue(QStringLiteral(":canonical2"), canonical);
+    return q.exec() && q.next();
 }
 
 QStringList LibraryDatabase::suggestTags(const QString &prefix, int limit) const

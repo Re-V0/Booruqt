@@ -27,12 +27,10 @@
 #include <windows.h>
 #endif
 
-namespace {
-
-// Writes the tags sidecar. Unix hides it by the leading dot in its name;
-// Windows ignores the dot and needs the hidden attribute, without which
-// every image would get a visible .txt neighbour in Explorer.
-void writeSidecar(const QString &path, const QStringList &tags)
+// Unix hides the sidecar by the leading dot in its name; Windows ignores
+// the dot and needs the hidden attribute, without which every image would
+// get a visible .txt neighbour in Explorer.
+void DownloadManager::writeSidecar(const QString &path, const QStringList &tags)
 {
 #ifdef Q_OS_WIN
     // Windows refuses to truncate an existing hidden file for writing.
@@ -48,8 +46,6 @@ void writeSidecar(const QString &path, const QStringList &tags)
     SetFileAttributesW(reinterpret_cast<const wchar_t *>(nativePath.utf16()), FILE_ATTRIBUTE_HIDDEN);
 #endif
 }
-
-} // namespace
 
 DownloadManager::DownloadManager(LibraryDatabase *library, QObject *parent)
     : QObject(parent), m_manager(new QNetworkAccessManager(this)), m_library(library)
